@@ -146,12 +146,106 @@ def run_phase_4(settings, dry_run: bool = False):
         print("   [DRY RUN] Would upload to Google Drive")
         return True
     
-    # TODO: Implement later
-    # from editor import assemble_video
-    # from distributor import upload_to_drive, log_to_sheets
+    # Retrieve context from Phase 3
+    scenario = getattr(settings, '_current_scenario', None)
+    video_clips = getattr(settings, '_current_video_clips', None)
+    audio_clips = getattr(settings, '_current_audio_clips', None)
     
-    print("   ⚠️ Phase 4 not yet implemented")
-    return False
+    if not scenario or not video_clips or not audio_clips:
+        print("   ⚠️  Context missing. Attempting to resume from latest findings...")
+        from archivist import Archivist
+        archivist = Archivist(settings.google_sheet_id)
+        
+        # Find latest ANIMATION_DONE scenario
+        all_scenarios = archivist.get_all_scenarios()
+        resume_scenario = None
+        for s in reversed(all_scenarios):
+             if s.status == "ANIMATION_DONE":
+                 resume_scenario = s
+                 break
+        
+        if resume_scenario:
+            print(f"      ✅ Found resumable scenario: {resume_scenario.id}")
+            scenario = resume_scenario
+            
+            # Reconstruct clips
+            # Assumes standard naming convention from previous phases
+            scenario_dir = settings.output_dir  # Base output dir
+            # Note: sound_engineer makes a subdir for audio, cinematographer puts directly in output?
+            # Let's check logic:
+            # Cinematographer: `video_path = Path(keyframe.path).parent / f"video_{keyframe.stage}.mp4"`
+            # Keyframes are typically in output_dir directly?
+            # SoundEngineer: `scenario_dir = self.output_dir / scenario_id` -> `audio_{stage}.mp3`
+            
+            # Re-building VideoClips (assuming they are in output_dir, checking file existence)
+            from cinematographer import VideoClip
+            from sound_engineer import AudioClip
+            
+            video_clips = []
+            audio_clips = []
+            
+            for stage in [1, 2, 3]:
+                # Video
+                v_path = os.path.join(settings.output_dir, f"video_{stage}.mp4")
+                if os.path.exists(v_path):
+                    video_clips.append(VideoClip(stage=stage, path=v_path, duration=5.0))
+                
+                # Audio
+                a_path = os.path.join(settings.output_dir, scenario.id, f"audio_{stage}.mp3")
+                if os.path.exists(a_path):
+                     # Retrieve mood from scenario data
+                     stage_data = getattr(scenario, f"stage_{stage}")
+                     mood = stage_data.mood
+                     audio_clips.append(AudioClip(stage=stage, path=a_path, duration=5.0, mood=mood))
+            
+            if len(video_clips) < 3 or len(audio_clips) < 3:
+                 print("   ❌ Missing some media files for resume. Cannot proceed.")
+                 return False
+                 
+            print(f"      ✅ Loaded {len(video_clips)} videos and {len(audio_clips)} audios")
+            
+        else:
+            print("   ❌ No resumable scenario found (Status=ANIMATION_DONE). Run Phase 3 first.")
+            return False
+        
+    from editor import assemble_video
+    from archivist import Archivist
+    from distributor import Distributor
+    
+    output_dir = settings.output_dir
+    
+    try:
+        final_video_path = assemble_video(scenario, video_clips, audio_clips, output_dir)
+        
+        # Upload to Drive
+        if not settings.drive_folder_id or settings.drive_folder_id == "YOUR_DRIVE_FOLDER_ID":
+             print("   ⚠️ Drive Folder ID not configured. Skipping upload.")
+             drive_link = ""
+        else:
+             distributor = Distributor(settings.drive_folder_id)
+             drive_link = distributor.upload_video(
+                 final_video_path, 
+                 title=f"{scenario.id}.mp4",
+                 description=scenario.premise
+             )
+        
+        # Update status
+        archivist = Archivist(settings.google_sheet_id)
+        archivist.update_status(scenario.id, "COMPLETED", video_url=drive_link)
+        
+        # Set video URL on scenario object for later use
+        scenario.video_url = drive_link
+        settings._current_final_video = final_video_path
+        
+        print(f"\n✅ Phase 4 complete! Final video: {final_video_path}")
+        if drive_link:
+            print(f"   ☁️  Drive Link: {drive_link}")
+            
+        return True
+        
+    except Exception as e:
+        print(f"   ❌ Assembly/Distribution failed: {e}")
+        return False
 
 
 def main():

@@ -97,12 +97,17 @@ class SoundEngineer:
         
         try:
             # Prepare arguments based on model arguments
-            args = {"prompt": mood_prompt}
+            args = {}
             
-            if "stable-audio" in self.audio_model:
-                args["seconds_total"] = duration
-            else:
+            if "elevenlabs" in self.audio_model:
+                args["text"] = mood_prompt
                 args["duration"] = duration
+            else:
+                args["prompt"] = mood_prompt
+                if "stable-audio" in self.audio_model:
+                    args["seconds_total"] = duration
+                else:
+                    args["duration"] = duration
 
             # Call Fal.ai sound effects API
             result = fal_client.subscribe(

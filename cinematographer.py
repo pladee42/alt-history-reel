@@ -116,6 +116,7 @@ class Cinematographer:
                 arguments={
                     "image_url": image_url,
                     "prompt": motion_prompt,
+                    "aspect_ratio": "9:16",
                 },
             )
             

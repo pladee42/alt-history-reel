@@ -1,0 +1,55 @@
+# Model Configuration
+# Easy to swap models and tune generation parameters
+
+# ============================================
+# GEMINI (Screenwriter + Vision Gate)
+# ============================================
+gemini:
+  # Model name - options: gemini-3.0-flash-preview, gemini-3.0-pro-preview
+  model: "gemini-3.0-flash-preview"
+  
+  # Screenwriter generation settings
+  screenwriter:
+    temperature: 0.85 
+    
+  # Vision Gate settings  
+  vision_gate:
+    temperature: 0.3  # Lower = more consistent judgments
+
+# ============================================
+# FAL.AI (Image Generation)
+# ============================================
+fal:
+  # Text-to-Image model (for Stage 1)
+  text_to_image:
+    model: "fal-ai/nano-banana"
+    # model: "fal-ai/flux-pro"    # Best quality, most expensive
+    num_inference_steps: 4  # More steps = higher quality, slower
+    
+  # Image-to-Image model (for Stages 2-3)
+  image_to_image:
+    model: "fal-ai/nano-banana"
+    strength: 0.65  # How much to change from reference (0.0 = keep same, 1.0 = ignore reference)
+    num_inference_steps: 28
+    
+  # Image dimensions (9:16 vertical for short-form video)
+  image_size:
+    width: 720
+    height: 1280
+
+# ============================================
+# FAL.AI (Video Generation) - Phase 3
+# ============================================
+fal_video:
+  # Options: luma, kling, mochi, hunyuan
+  model: "fal-ai/minimax/hailuo-2.3/pro/image-to-video"
+  # model: "fal-ai/kling-video/v1.6/pro/image-to-video"
+  # model: "fal-ai/mochi-v1"
+  # model: "fal-ai/hunyuan-video"
+  
+# ============================================
+# FAL.AI (Audio Generation) - Phase 3
+# ============================================
+fal_audio:
+  model: "fal-ai/cassetteai/sound-effects"
+  duration: 5.0  # seconds per sound effect

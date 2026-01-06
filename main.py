@@ -22,20 +22,68 @@ def run_phase_1(settings, dry_run: bool = False):
 
 
 def run_phase_2(settings, dry_run: bool = False):
-    """Phase 2: Generate static keyframes with Vision Gate."""
-    print("🎨 Phase 2: Generating static keyframes...")
+    """Phase 2: Generate scenario and static keyframes with Vision Gate."""
+    print("🎨 Phase 2: Generating scenario and static keyframes...")
     
     if dry_run:
-        print("   [DRY RUN] Would generate 3 keyframes with Flux")
+        print("   [DRY RUN] Would generate scenario with Gemini")
+        print("   [DRY RUN] Would store in Google Sheets")
+        print("   [DRY RUN] Would generate 3 keyframes with Fal.ai")
         print("   [DRY RUN] Would verify with Gemini Vision Gate")
         return True
     
-    # TODO: Implement in next phase
-    # from screenwriter import generate_script
-    # from art_department import generate_keyframes, verify_consistency
+    from screenwriter import generate_scenario
+    from archivist import Archivist
+    from art_department import ArtDepartment
     
-    print("   ⚠️ Phase 2 not yet implemented")
-    return False
+    # Initialize archivist early for duplicate checking
+    archivist = Archivist(settings.google_sheet_id)
+    
+    # Get existing premises to avoid duplicates
+    existing_scenarios = archivist.get_all_scenarios()
+    existing_premises = [s.premise for s in existing_scenarios]
+    print(f"   📚 Found {len(existing_premises)} existing scenarios to avoid")
+    
+    # Step 1: Generate a new scenario (with duplicate retry)
+    print("\n📝 Step 1: Generating scenario...")
+    scenario = None
+    max_scenario_tries = 5
+    
+    for attempt in range(1, max_scenario_tries + 1):
+        scenario = generate_scenario(avoid_premises=existing_premises)
+        
+        # Step 2: Try to store in Google Sheets (with duplicate check)
+        print(f"\n📊 Step 2: Storing in Google Sheets (attempt {attempt}/{max_scenario_tries})...")
+        
+        if archivist.store_scenario(scenario):
+            break  # Success!
+        else:
+            print("   🔄 Duplicate found, generating new scenario...")
+            existing_premises.append(scenario.premise)  # Add to avoid list
+            scenario = None
+            if attempt == max_scenario_tries:
+                print(f"   ❌ Failed to generate unique scenario after {max_scenario_tries} attempts")
+                return False
+    
+    # Step 3: Generate keyframes with Vision Gate
+    print("\n🖼️ Step 3: Generating keyframes...")
+    art = ArtDepartment(settings)
+    keyframes = art.generate_with_retries(scenario, max_retries=settings.image_retries)
+    
+    if not keyframes:
+        print("   ❌ Failed to generate consistent keyframes")
+        archivist.update_status(scenario.id, "FAILED")
+        return False
+    
+    # Update status
+    archivist.update_status(scenario.id, "IMAGES_DONE")
+    
+    # Store keyframes info for Phase 3
+    settings._current_scenario = scenario
+    settings._current_keyframes = keyframes
+    
+    print("\n✅ Phase 2 complete!")
+    return True
 
 
 def run_phase_3(settings, dry_run: bool = False):

@@ -15,7 +15,7 @@ from dataclasses import dataclass
 
 import yaml
 import fal_client
-import google.generativeai as genai
+from google import genai
 from PIL import Image
 import requests
 from dotenv import load_dotenv
@@ -90,11 +90,14 @@ class ArtDepartment:
         if not fal_key:
             raise ValueError("FAL_KEY not found in environment")
         
-        # Gemini for Vision Gate
+        # Gemini Vision Gate using new Client API
         gemini_config = self.config.get("gemini", {})
-        gemini_model = gemini_config.get("model", "gemini-2.0-flash-exp")
-        genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
-        self.vision_model = genai.GenerativeModel(gemini_model)
+        self.vision_model_name = gemini_config.get("model", "gemini-2.0-flash")
+        self.vision_gate_enabled = gemini_config.get("vision_gate", {}).get("enabled", True)
+        api_key = os.getenv("GOOGLE_API_KEY")
+        if not api_key:
+            raise ValueError("GOOGLE_API_KEY not found in environment")
+        self.genai_client = genai.Client(api_key=api_key)
         
         # Load Vision Gate prompt
         try:
@@ -166,9 +169,18 @@ Reply PASS if consistent, FAIL if not."""
         
         if reference_image_url:
             # Use image-to-image for stages 2-3 to maintain consistency
-            result = fal_client.subscribe(
-                self.img2img_model,  # From model_config.yaml
-                arguments={
+            # Different models use different parameter names
+            if "nano-banana" in self.img2img_model:
+                # nano-banana/edit uses image_urls (plural, as list)
+                img2img_args = {
+                    "prompt": prompt,
+                    "image_urls": [reference_image_url],
+                    "num_inference_steps": self.img2img_steps,
+                    "num_images": 1,
+                }
+            else:
+                # flux/dev/image-to-image and others use image_url + strength
+                img2img_args = {
                     "prompt": prompt,
                     "image_url": reference_image_url,
                     "strength": self.img2img_strength,
@@ -178,7 +190,11 @@ Reply PASS if consistent, FAIL if not."""
                     },
                     "num_inference_steps": self.img2img_steps,
                     "num_images": 1,
-                },
+                }
+            
+            result = fal_client.subscribe(
+                self.img2img_model,
+                arguments=img2img_args,
             )
         else:
             # Text-to-image for stage 1
@@ -262,8 +278,12 @@ Reply PASS if consistent, FAIL if not."""
             location_name=scenario.location_name
         )
         
-        # Send to Gemini Vision
-        response = self.vision_model.generate_content([verification_prompt] + images)
+        # Send to Gemini Vision using new Client API
+        # PIL.Image objects are automatically converted in the new SDK
+        response = self.genai_client.models.generate_content(
+            model=self.vision_model_name,
+            contents=[verification_prompt] + images
+        )
         feedback = response.text.strip()
         
         passed = feedback.upper().startswith("PASS")
@@ -292,6 +312,11 @@ Reply PASS if consistent, FAIL if not."""
             
             # Generate keyframes
             keyframes = self.generate_all_keyframes(scenario)
+            
+            # Skip Vision Gate if disabled
+            if not self.vision_gate_enabled:
+                print("\n⏭️  Vision Gate: DISABLED (skipping verification)")
+                return keyframes
             
             # Verify consistency
             passed, feedback = self.verify_consistency(keyframes, scenario)

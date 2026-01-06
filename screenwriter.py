@@ -13,7 +13,7 @@ from typing import Optional
 from dataclasses import dataclass, field, asdict
 
 import yaml
-import google.generativeai as genai
+from google import genai
 from dotenv import load_dotenv
 
 # Load environment variables
@@ -40,7 +40,7 @@ def load_model_config() -> dict:
             return yaml.safe_load(f)
     # Default config if file doesn't exist
     return {
-        "gemini": {"model": "gemini-2.0-flash-exp", "screenwriter": {"temperature": 0.95}}
+        "gemini": {"model": "gemini-2.0-flash", "screenwriter": {"temperature": 0.95}}
     }
 
 
@@ -100,7 +100,7 @@ class Scenario:
 
 
 class Screenwriter:
-    """Generates alternative history scenarios using Gemini Pro."""
+    """Generates alternative history scenarios using Gemini."""
     
     def __init__(self, api_key: Optional[str] = None):
         """Initialize with Gemini API key."""
@@ -111,11 +111,11 @@ class Screenwriter:
         # Load model config
         self.config = load_model_config()
         gemini_config = self.config.get("gemini", {})
-        model_name = gemini_config.get("model", "gemini-2.0-flash-exp")
+        self.model_name = gemini_config.get("model", "gemini-2.0-flash")
         self.temperature = gemini_config.get("screenwriter", {}).get("temperature", 0.95)
         
-        genai.configure(api_key=self.api_key)
-        self.model = genai.GenerativeModel(model_name)
+        # Initialize the new genai Client
+        self.client = genai.Client(api_key=self.api_key)
         
         # Load prompt from file
         try:
@@ -158,14 +158,15 @@ Respond with valid JSON."""
         today = datetime.now().strftime("%B %d")
         prompt += f"\n\nToday's date: {today}. You may optionally tie the scenario to historical events near this date."
         
-        # Generate
+        # Generate using new Client API
         print("🎬 Screenwriter generating scenario...")
-        response = self.model.generate_content(
-            prompt,
-            generation_config=genai.GenerationConfig(
-                temperature=self.temperature,  # From model_config.yaml
-                response_mime_type="application/json"
-            )
+        response = self.client.models.generate_content(
+            model=self.model_name,
+            contents=prompt,
+            config={
+                'temperature': self.temperature,
+                'response_mime_type': 'application/json'
+            }
         )
         
         # Parse response

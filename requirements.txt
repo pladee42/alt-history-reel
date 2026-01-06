@@ -1,0 +1,28 @@
+# ChronoReel - Alternative History Video Engine
+# Core dependencies
+
+# AI & LLM
+google-generativeai>=0.8.0
+
+# Google Workspace
+gspread>=6.0.0
+google-auth>=2.25.0
+google-auth-oauthlib>=1.2.0
+google-api-python-client>=2.100.0
+
+# Image Generation (Flux via Fal.ai)
+fal-client>=0.4.0
+
+# Video Generation (Luma Dream Machine)
+lumaai>=1.0.0
+
+# Audio Generation (ElevenLabs)
+elevenlabs>=1.0.0
+
+# Video Assembly
+moviepy>=1.0.3
+
+# Config & Utils
+pyyaml>=6.0.1
+python-dotenv>=1.0.0
+Pillow>=10.0.0

@@ -1,0 +1,26 @@
+# ChronoReel - Style Template
+# Copy this file to create new visual styles (e.g., vintage.yaml, anime.yaml)
+
+channel_name: "ChronoReel"
+google_sheet_id: "YOUR_SHEET_ID_HERE"
+drive_folder_id: "YOUR_DRIVE_FOLDER_ID_HERE"
+
+# ============================================
+# VISUAL STYLE
+# ============================================
+style:
+  name: "Your Style Name"
+  # This suffix is appended to ALL image prompts
+  image_suffix: "style keywords, 4k, vertical 9:16"
+  # Video animation style
+  video_prompt: "Motion description for Luma"
+
+# ============================================
+# AUDIO STYLE
+# ============================================
+audio_mood: "mood keywords for ElevenLabs"
+
+# ============================================
+# GENERATION SETTINGS
+# ============================================
+image_retries: 3

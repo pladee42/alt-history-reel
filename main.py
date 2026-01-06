@@ -91,16 +91,50 @@ def run_phase_3(settings, dry_run: bool = False):
     print("🎬 Phase 3: Animating keyframes...")
     
     if dry_run:
-        print("   [DRY RUN] Would animate with Luma Dream Machine")
-        print("   [DRY RUN] Would generate audio with ElevenLabs")
+        print("   [DRY RUN] Would animate with Fal.ai (Cinematographer)")
+        print("   [DRY RUN] Would generate audio with Fal.ai (Sound Engineer)")
         return True
     
-    # TODO: Implement later
-    # from cinematographer import animate_keyframes
-    # from sound_engineer import generate_audio
+    # Retrieve context from Phase 2
+    scenario = getattr(settings, '_current_scenario', None)
+    keyframes = getattr(settings, '_current_keyframes', None)
     
-    print("   ⚠️ Phase 3 not yet implemented")
-    return False
+    if not scenario or not keyframes:
+        print("   ❌ Context missing (Phase 2 did not run or failed). Cannot run Phase 3 standalone yet.")
+        return False
+        
+    from cinematographer import animate_keyframes
+    from sound_engineer import generate_audio
+    from archivist import Archivist
+    
+    output_dir = settings.output_dir
+    
+    # Step 1: Animate Keyframes (Image-to-Video)
+    print("\n🎥 Step 1: Generating video clips...")
+    try:
+        video_clips = animate_keyframes(keyframes, scenario, output_dir)
+    except Exception as e:
+        print(f"   ❌ Animation failed: {e}")
+        return False
+        
+    # Step 2: Generate Audio (Sound Effects)
+    print("\n🔊 Step 2: Generating sound effects...")
+    try:
+        audio_clips = generate_audio(scenario, output_dir)
+    except Exception as e:
+        print(f"   ❌ Audio generation failed: {e}")
+        return False
+        
+    # Store results for Phase 4
+    settings._current_video_clips = video_clips
+    settings._current_audio_clips = audio_clips
+    
+    # Update status
+    archivist = Archivist(settings.google_sheet_id)
+    archivist.update_status(scenario.id, "ANIMATION_DONE")
+    
+    print("\n✅ Phase 3 complete!")
+    return True
 
 
 def run_phase_4(settings, dry_run: bool = False):

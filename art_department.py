@@ -198,9 +198,15 @@ Reply PASS if consistent, FAIL if not."""
             )
         else:
             # Text-to-image for stage 1
-            result = fal_client.subscribe(
-                self.txt2img_model,  # From model_config.yaml
-                arguments={
+            if "nano-banana" in self.txt2img_model:
+                txt2img_args = {
+                    "prompt": prompt,
+                    "aspect_ratio": "9:16",
+                    "num_inference_steps": self.txt2img_steps,
+                    "num_images": 1,
+                }
+            else:
+                txt2img_args = {
                     "prompt": prompt,
                     "image_size": {
                         "width": self.img_width,
@@ -208,7 +214,11 @@ Reply PASS if consistent, FAIL if not."""
                     },
                     "num_inference_steps": self.txt2img_steps,
                     "num_images": 1,
-                },
+                }
+                
+            result = fal_client.subscribe(
+                self.txt2img_model,  # From model_config.yaml
+                arguments=txt2img_args,
             )
         
         # Download and save the image

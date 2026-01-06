@@ -73,7 +73,8 @@ class SoundEngineer:
         print(f"   Duration: {self.default_duration}s")
     
     def generate_sfx(self, mood_prompt: str, stage_num: int, 
-                     scenario_id: str, duration: Optional[float] = None) -> AudioClip:
+                     scenario_id: str, duration: Optional[float] = None,
+                     stage_description: str = "") -> AudioClip:
         """
         Generate a sound effect for a stage.
         
@@ -82,14 +83,20 @@ class SoundEngineer:
             stage_num: Stage number for filename
             scenario_id: Scenario ID for folder organization
             duration: Optional duration override
+            stage_description: Description of the stage context
             
         Returns:
             AudioClip with path to the generated audio
         """
         duration = duration or self.default_duration
         
+        # Combine mood and description for a richer prompt
+        full_prompt = f"{mood_prompt}"
+        if stage_description:
+            full_prompt = f"{mood_prompt}. Context: {stage_description}"
+        
         print(f"   🎵 Generating audio for stage {stage_num}...")
-        print(f"      Mood: {mood_prompt[:50]}...")
+        print(f"      Prompt: {full_prompt[:70]}...")
         
         # Create scenario folder if needed
         scenario_dir = self.output_dir / scenario_id
@@ -99,11 +106,15 @@ class SoundEngineer:
             # Prepare arguments based on model arguments
             args = {}
             
+            # Get prompt influence from config, default to 0.5 if not set
+            prompt_influence = self.config.get("fal_audio", {}).get("prompt_influence", 0.5)
+
             if "elevenlabs" in self.audio_model:
-                args["text"] = mood_prompt
-                args["duration"] = duration
+                args["text"] = full_prompt
+                args["duration_seconds"] = float(duration)
+                args["prompt_influence"] = float(prompt_influence)
             else:
-                args["prompt"] = mood_prompt
+                args["prompt"] = full_prompt
                 if "stable-audio" in self.audio_model:
                     args["seconds_total"] = duration
                 else:
@@ -171,7 +182,8 @@ class SoundEngineer:
             clip = self.generate_sfx(
                 mood_prompt=mood_prompt,
                 stage_num=stage_num,
-                scenario_id=scenario.id
+                scenario_id=scenario.id,
+                stage_description=stage.description
             )
             audio_clips.append(clip)
             time.sleep(1)  # Brief pause between API calls

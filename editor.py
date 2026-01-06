@@ -67,19 +67,30 @@ class Editor:
         print(f"   Output: {self.output_dir}")
 
     def create_text_clip(self, text: str, fontsize: int, duration: float, 
-                         position: Tuple[str, str] = ('center', 'center')) -> TextClip:
+                         position: Tuple[str, str] = ('center', 'center'),
+                         size: object = None) -> TextClip:
         """Create a styled text overlay."""
-        # Wrap text to fit vertical video width (approx 30 chars for 720px width)
-        wrapped_text = "\n".join(textwrap.wrap(text, width=30))
+        
+        # Use 'caption' method if size is provided (better for wrapping/blocks)
+        if size:
+            method = 'caption'
+            # Remove manual wrapping if using caption, as ImageMagick handles it
+            final_text = text 
+        else:
+            method = 'label'
+            # Manual wrap for label method
+            final_text = "\n".join(textwrap.wrap(text, width=30))
         
         return TextClip(
-            text=wrapped_text,
+            text=final_text,
             font_size=fontsize,
             font=self.font,
             color=self.color,
             stroke_color=self.stroke_color,
             stroke_width=self.stroke_width,
-            method='label'
+            method=method,
+            size=size,
+            margin=(40, 40)  # Add margin to prevent stroke clipping
         ).with_position(position).with_duration(duration)
 
     def assemble_final_cut(self, scenario: Scenario, video_clips: List[VideoClip], 
@@ -133,12 +144,16 @@ class Editor:
             
             # Create text overlays
             # 1. Year (Top)
+            # 1. Year (Top)
             label_text = str(stage_info.year)
+            text_size = (int(video.w * 0.9), None) # 90% width, auto height
+            
             text_top = self.create_text_clip(
                 label_text, 
                 self.fontsize_header, 
                 video.duration, 
-                ('center', 100)  # Top position
+                ('center', 125),  # Top position (moved down)
+                size=text_size
             )
             
             # 2. Description (Bottom) - Show only for first 3 seconds of clip
@@ -154,7 +169,8 @@ class Editor:
                 desc_text,
                 self.fontsize_body,
                 3.0,  # Duration
-                ('center', 'bottom')
+                ('center', video.h - 400), # Bottom position (moved up)
+                size=text_size
             ).with_start(0.5) # Slight delay
             
             # Composite stage clip

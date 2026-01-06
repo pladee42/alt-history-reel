@@ -5,9 +5,13 @@ Verifies video assembly using existing media files.
 """
 
 import os
+import sys
 from pathlib import Path
 from dataclasses import dataclass
 from typing import List
+
+# Add parent directory to path to allow importing modules
+sys.path.append(str(Path(__file__).parent.parent))
 
 # Mock classes to match main.py expectation
 @dataclass
@@ -61,9 +65,9 @@ def run_test():
     scenario = Scenario(
         id="test_assembly_001",
         premise="What if the test script worked perfectly?",
-        stage_1=Stage(year="1900", label="The Beginning", description="A peaceful start to the test run."),
-        stage_2=Stage(year="1950", label="The Conflict", description="Things get complicated in the middle."),
-        stage_3=Stage(year="2000", label="The Resolution", description="A happy ending for the code.")
+        stage_1=Stage(year="2024", label="The Beginning", description="A peaceful start to the test run."),
+        stage_2=Stage(year="2025", label="The Conflict", description="Things get complicated in the middle."),
+        stage_3=Stage(year="2030", label="The Resolution", description="A happy ending for the code.")
     )
 
     # Create Clips

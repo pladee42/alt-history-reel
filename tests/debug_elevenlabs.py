@@ -15,8 +15,8 @@ def test_elevenlabs():
         result = fal_client.subscribe(
             model,
             arguments={
-                "text": prompt,  # Testing 'text' instead of 'prompt'
-                "duration": 5.0
+                "text": prompt,
+                "duration_seconds": 5.0
             }
         )
         print("Success!")

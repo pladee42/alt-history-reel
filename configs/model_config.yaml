@@ -54,3 +54,4 @@ fal_video:
 fal_audio:
   model: "fal-ai/elevenlabs/sound-effects/v2"
   duration: 5.0  # seconds per sound effect
+  prompt_influence: 0.7 # Balance between prompt and creativity

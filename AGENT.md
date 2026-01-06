@@ -127,11 +127,13 @@ image_retries: 3
 - **Output:** Update Sheets status = "IMAGES_DONE"
 
 ### Module E: `cinematographer.py` (Video Animation)
-- Image-to-Video using Luma Dream Machine
+- Image-to-Video using Fal.ai (Luma, Kling, Mochi, or Hunyuan)
 - Apply video_prompt from style config
+- Easy to switch models for cost/quality comparison
 
 ### Module F: `sound_engineer.py` (Audio)
-- ElevenLabs SFX based on stage moods
+- Fal.ai CassetteAI SFX based on stage moods
+- Up to 30 seconds, fast processing
 
 ### Module G: `editor.py` (Assembly)
 - MoviePy: stitch clips + audio + crossfades + text overlays
@@ -158,7 +160,9 @@ image_retries: 3
 |-----------|------------|
 | Orchestration | `google-generativeai` (Gemini Pro) |
 | Database | `gspread` (Google Sheets) |
-| Image Gen | Flux via Fal.ai API |
-| Video Gen | Luma Dream Machine API |
-| Audio | ElevenLabs Sound Effects |
+| Image Gen | Fal.ai (Nano Banana, Flux) |
+| Video Gen | Fal.ai (Luma, Kling, Mochi, Hunyuan) |
+| Audio | Fal.ai (CassetteAI SFX) |
 | Assembly | MoviePy |
+
+> **Note:** All generation tasks use Fal.ai's single API, making it easy to switch between models (e.g., try Kling instead of Luma for video).

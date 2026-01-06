@@ -10,14 +10,8 @@ google-auth>=2.25.0
 google-auth-oauthlib>=1.2.0
 google-api-python-client>=2.100.0
 
-# Image Generation (Flux via Fal.ai)
+# Fal.ai - Image, Video, and Audio generation (single provider)
 fal-client>=0.4.0
-
-# Video Generation (Luma Dream Machine)
-lumaai>=1.0.0
-
-# Audio Generation (ElevenLabs)
-elevenlabs>=1.0.0
 
 # Video Assembly
 moviepy>=1.0.3
@@ -26,3 +20,6 @@ moviepy>=1.0.3
 pyyaml>=6.0.1
 python-dotenv>=1.0.0
 Pillow>=10.0.0
+
+# Optional: Alternative audio provider
+# elevenlabs>=1.0.0

@@ -239,6 +239,11 @@ def run_phase_4(settings, dry_run: bool = False):
                 title=f"{scenario.id}.mp4",
                 description=scenario.premise
             )
+            
+            # Also upload the assets folder for debugging
+            scenario_folder = output_dir / scenario.id
+            if scenario_folder.exists():
+                distributor.upload_folder(str(scenario_folder), scenario.id)
         elif settings.drive_folder_id and settings.drive_folder_id != "YOUR_DRIVE_FOLDER_ID":
             # Fallback to Drive (legacy)
             print(f"   📤 Uploading to Google Drive...")

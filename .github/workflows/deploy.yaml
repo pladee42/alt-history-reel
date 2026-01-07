@@ -68,7 +68,8 @@ jobs:
             --task-timeout 30m \
             --set-env-vars "GOOGLE_API_KEY=${{ secrets.GOOGLE_API_KEY }}" \
             --set-env-vars "FAL_KEY=${{ secrets.FAL_KEY }}" \
-            --set-secrets "GOOGLE_APPLICATION_CREDENTIALS=timeline-b:latest"
+            --set-secrets "/secrets/sa-key.json=timeline-b:latest" \
+            --set-env-vars "GOOGLE_APPLICATION_CREDENTIALS=/secrets/sa-key.json"
 
       - name: Print deployment info
         run: |

@@ -89,25 +89,64 @@ class Editor:
         # Black background
         bg = TextClip(text=" ", size=(1080, header_height), color='black', bg_color='black', font_size=10, font=self.font).with_duration(duration)
         
-        # Clean title & Uppercase
-        clean_title = title.replace('**', '').upper()
-        
-        # Ensure centered multi-line
-        text_clip_args = {
-            "text": clean_title,
-            "font_size": 80,
-            "font": self.font,
-            "color": 'white',
-            "stroke_color": 'black',
-            "stroke_width": 2,
-            "method": 'caption',
-            "size": (1000, header_height),
-            "text_align": "center" # Ensure center alignment for multi-line
-        }
-        
-        text_clip = TextClip(**text_clip_args).with_position(('center', 'center')).with_duration(duration)
-        
-        return CompositeVideoClip([bg, text_clip]).with_position(('center', 'top'))
+        # Prepare for Pango Markup (Rich Text)
+        try:
+            # 1. Convert title to upper
+            # 2. Split by **
+            # 3. Construct XML-like markup
+            pango_title = title.upper()
+            parts = pango_title.split('**')
+            markup_text = ""
+            for i, part in enumerate(parts):
+                if not part: continue
+                # Escape minimal xml entities just in case
+                safe_part = part.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+                
+                if i % 2 == 1:
+                    # Emphasized part (Cyan)
+                    markup_text += f"<span foreground='#00FFFF' weight='bold'>{safe_part}</span>"
+                else:
+                    # Normal part (White)
+                    markup_text += safe_part
+            
+            # Center alignment with Pango requires strict markup
+            # usually Pango aligns based on 'pango-view' or wrapping
+            # wrapping in <div align='center'> isn't standard pango spec, 
+            # but moviepy's text_align argument should handle it if size is provided.
+            
+            text_clip = TextClip(
+                text=markup_text,
+                font_size=80,
+                font=self.font,
+                color='white', # Fallback/Default
+                stroke_color='black',
+                stroke_width=2,
+                method='pango',
+                size=(1000, header_height),
+                text_align="center"
+            ).with_position(('center', 'center')).with_duration(duration)
+            
+            return CompositeVideoClip([bg, text_clip]).with_position(('center', 'top'))
+
+        except Exception as e:
+            print(f"      ⚠️ Pango rich text failed ({e}), falling back to plain text.")
+            
+            # Fallback to plain caption
+            clean_title = title.replace('**', '').upper()
+            
+            text_clip = TextClip(
+                text=clean_title,
+                font_size=80,
+                font=self.font,
+                color='white',
+                stroke_color='black',
+                stroke_width=2,
+                method='caption',
+                size=(1000, header_height),
+                text_align="center"
+            ).with_position(('center', 'center')).with_duration(duration)
+            
+            return CompositeVideoClip([bg, text_clip]).with_position(('center', 'top'))
 
     def create_text_clip(self, text: str, fontsize: int, duration: float, 
                          position: Tuple[str, str] = ('center', 'center'),

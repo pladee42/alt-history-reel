@@ -11,6 +11,7 @@ import google.genai as genai
 from dotenv import load_dotenv
 
 from screenwriter import Scenario
+from manager import load_prompt
 
 
 load_dotenv()
@@ -35,21 +36,8 @@ class PromptImprover:
         print(f"✨ Enhancing prompts for: {scenario.title}...")
 
         # Construct the system instruction
-        system_instruction = """
-You are an expert AI Prompt Engineer for high-end video production.
-Your task is to take a raw scene description and convert it into two specific prompts:
-1. IMAGE_PROMPT: A highly detailed, artistic prompt for an image generation model (like Midjourney/Fal.ai).
-2. AUDIO_PROMPT: A rich, atmospheric prompt for a sound effect generation model (ElevenLabs).
-
-INPUT CONTEXT:
-- Location: {location}
-- Style: {style_name} ({style_suffix})
-- Consistency: EXTERIOR VIEW ONLY, wide establishing shot, no interior shots.
-
-Refine the descriptions to be visual, sensory, and specific to the requested style.
-For Audio, focus on the soundscape (ambient noise, specific effects, mood).
-For Image, focus on lighting, composition, texture, and the specific historical shift.
-"""
+        # Construct the system instruction
+        system_instruction = load_prompt("prompt_improver")
         
         # Prepare the conversation or batch request
         # We'll do it stage by stage for simplicity and clearer context
@@ -59,18 +47,14 @@ For Image, focus on lighting, composition, texture, and the specific historical 
             
             print(f"   ✨ Refining Stage {i}: {stage.label}...")
             
-            prompt = f"""
-Input Stage: {stage.label} ({stage.year})
-Raw Description: {stage.description}
-Mood: {stage.mood}
-
-Generate the 2 prompts.
-RETURN JSON ONLY:
-{{
-  "image_prompt": "...",
-  "audio_prompt": "..."
-}}
-"""
+            # Load and format user prompt
+            user_template = load_prompt("prompt_improver_user")
+            prompt = user_template.format(
+                label=stage.label,
+                year=stage.year,
+                description=stage.description,
+                mood=stage.mood
+            )
             # Format system instruction with current context
             formatted_system = system_instruction.format(
                 location=scenario.location_name,

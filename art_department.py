@@ -21,7 +21,7 @@ import requests
 from dotenv import load_dotenv
 
 from screenwriter import Scenario
-from manager import Settings, StyleConfig
+from manager import Settings, StyleConfig, load_prompt
 
 # Load environment variables
 load_dotenv(override=True)
@@ -30,12 +30,7 @@ load_dotenv(override=True)
 PROJECT_ROOT = Path(__file__).parent
 
 
-def load_prompt(name: str) -> str:
-    """Load a prompt from the prompts directory."""
-    prompt_path = PROJECT_ROOT / "prompts" / f"{name}.md"
-    if prompt_path.exists():
-        return prompt_path.read_text(encoding='utf-8').strip()
-    raise FileNotFoundError(f"Prompt file not found: {prompt_path}")
+
 
 
 def load_model_config() -> dict:

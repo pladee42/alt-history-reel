@@ -12,6 +12,17 @@ from dataclasses import dataclass, field
 from typing import Dict, Optional
 
 import yaml
+from pathlib import Path
+
+PROJECT_ROOT = Path(__file__).parent
+
+
+def load_prompt(name: str) -> str:
+    """Load a prompt from the prompts directory."""
+    prompt_path = PROJECT_ROOT / "prompts" / f"{name}.md"
+    if prompt_path.exists():
+        return prompt_path.read_text(encoding='utf-8').strip()
+    raise FileNotFoundError(f"Prompt file not found: {prompt_path}")
 
 
 @dataclass

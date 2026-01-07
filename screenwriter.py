@@ -11,6 +11,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional
 from dataclasses import dataclass, field, asdict
+from manager import load_prompt
 
 import yaml
 from google import genai
@@ -24,12 +25,7 @@ load_dotenv(override=True)
 PROJECT_ROOT = Path(__file__).parent
 
 
-def load_prompt(name: str) -> str:
-    """Load a prompt from the prompts directory."""
-    prompt_path = PROJECT_ROOT / "prompts" / f"{name}.md"
-    if prompt_path.exists():
-        return prompt_path.read_text(encoding='utf-8').strip()
-    raise FileNotFoundError(f"Prompt file not found: {prompt_path}")
+
 
 
 def load_model_config() -> dict:

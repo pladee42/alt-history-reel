@@ -160,4 +160,3 @@ class PromptImprover:
                 print(f"DEBUG Response Text: {response.text}")
         
         return result
-```

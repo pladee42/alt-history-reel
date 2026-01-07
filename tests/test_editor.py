@@ -53,11 +53,11 @@ except ImportError as e:
 def run_test():
     # Setup test data using found files
     # UPDATE THIS PATH based on 'find' result
-    base_dir = Path("output/scenario_20260107_000140") 
+    base_dir = Path("output/test_fixtures") 
     
     if not base_dir.exists():
         print(f"❌ Test directory not found: {base_dir}")
-        print("Please check the 'output' folder for a valid scenario folder name.")
+        print("Run tests/create_test_media.py first.")
         return
 
     print(f"📂 Using media from: {base_dir}")

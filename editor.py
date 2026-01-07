@@ -14,6 +14,7 @@ import yaml
 from moviepy import (
     VideoFileClip, AudioFileClip, TextClip, 
     CompositeVideoClip, CompositeAudioClip, concatenate_videoclips,
+    concatenate_audioclips,
     vfx
 )
 from moviepy.audio.fx import AudioLoop
@@ -88,20 +89,23 @@ class Editor:
         # Black background
         bg = TextClip(text=" ", size=(1080, header_height), color='black', bg_color='black', font_size=10, font=self.font).with_duration(duration)
         
-        # Clean title for simpler rendering (Rich text is hard without Pango)
-        clean_title = title.replace('**', '')
+        # Clean title & Uppercase
+        clean_title = title.replace('**', '').upper()
         
-        text_clip = self.create_text_clip(
-            clean_title,
-            fontsize=80,
-            duration=duration,
-            position=('center', 'center'),
-            size=(1000, header_height)
-        )
-        # Note: create_text_clip wrapper uses specific args, need to ensure color/stroke are passed if not default
-        # But my create_text_clip uses self.color ("yellow") by default.
-        # I want WHITE for header.
-        # Let's verify create_text_clip args.
+        # Ensure centered multi-line
+        text_clip_args = {
+            "text": clean_title,
+            "font_size": 80,
+            "font": self.font,
+            "color": 'white',
+            "stroke_color": 'black',
+            "stroke_width": 2,
+            "method": 'caption',
+            "size": (1000, header_height),
+            "text_align": "center" # Ensure center alignment for multi-line
+        }
+        
+        text_clip = TextClip(**text_clip_args).with_position(('center', 'center')).with_duration(duration)
         
         return CompositeVideoClip([bg, text_clip]).with_position(('center', 'top'))
 
@@ -153,15 +157,11 @@ class Editor:
         if len(video_clips) != len(audio_clips):
             print("   ⚠️ Mismatch between video and audio clip counts.")
         
+        # Sort by stage
         video_clips.sort(key=lambda x: x.stage)
         audio_clips.sort(key=lambda x: x.stage)
         
-        # 1. Prepare Header (Static for whole video)
-        # Determine total duration
-        total_duration = 0
-        stages_data = [] # Store processed pairs
-        
-        # Pre-process durations to build header
+        # 1. Prepare Data Pairs
         ordered_clips = []
         for stage_num in [1, 2, 3]:
             v_data = next((v for v in video_clips if v.stage == stage_num), None)
@@ -169,130 +169,94 @@ class Editor:
             if v_data and a_data:
                 ordered_clips.append((stage_num, v_data, a_data))
 
-        # Check total duration
-        temp_durations = []
-        for _, v_data, a_data in ordered_clips:
-            # We use audio duration as master
-            path = a_data.path
-            if os.path.exists(path):
-                # We need to open it to get duration, done inside loop usually.
-                pass
-
         # 2. Process Each Stage
         for stage_num, v_data, a_data in ordered_clips:
             print(f"      Processing Stage {stage_num}...")
             video = VideoFileClip(v_data.path)
             audio = AudioFileClip(a_data.path)
             
-            # Loop/Trim video to match audio
-            if audio.duration > video.duration:
-                loop_count = int(audio.duration // video.duration) + 1
+            print(f"         src_video: {video.duration:.2f}s, src_audio: {audio.duration:.2f}s")
+            
+            # Determine target duration (Max of both to avoid cutting good footage)
+            target_duration = max(video.duration, audio.duration)
+            
+            # 1. Handle Video (Loop if too short)
+            if video.duration < target_duration:
+                loop_count = int(target_duration // video.duration) + 1
                 video = concatenate_videoclips([video] * loop_count)
-            video = video.subclipped(0, audio.duration).with_audio(audio)
+            video = video.subclipped(0, target_duration)
+            
+            # 2. Handle Audio (Loop if too short)
+            if audio.duration < target_duration:
+                # Use AudioLoop effect for safer looping
+                audio = AudioLoop(duration=target_duration).apply(audio)
+            
+            # Ensure hard limits
+            video = video.subclipped(0, target_duration)
+            audio = audio.subclipped(0, target_duration)
+            
+            video = video.with_audio(audio)
             
             # CROP & POSITION VIDEO (Below 350px header)
             # Crop to fit remaining height (1920-350 = 1570)
-            # Center crop logic: Keep middle of video
-            # Source: 1920h. Target: 1570h. Diff: 350. Crop 175 top, 175 bottom.
             video_cropped = video.cropped(y1=175, y2=1920-175)
             video_positioned = video_cropped.with_position((0, 350))
 
             # RANKING OVERLAY
-            # "1. Year" etc.
-            # Define Years
             years = [scenario.stage_1.year, scenario.stage_2.year, scenario.stage_3.year]
-            
             ranking_clips = []
             
-            # Line 1 (Gold)
-            txt_1 = f"1. {years[0]}"
-            rank_1 = self.create_text_clip(
-                txt_1, 
-                fontsize=70, 
-                duration=video.duration, 
-                position=('left', 'center'), 
-                color='#FFD700', 
-                stroke_color='black', 
-                stroke_width=3
-            ).with_position((50, 500)) # Absolute pos on canvas
-            ranking_clips.append(rank_1)
+            # Config
+            x_num = 50     # X position for "1." "2." "3."
+            x_year = 160   # X position for "2024" (Aligned column)
+            y_start = 500
+            y_gap = 150
             
-            # Line 2 (Silver)
-            # Show "2." always? User said "2, 3 is empty".
-            # So just "2."
-            txt_2_num = "2."
-            txt_2_yr = years[1]
-            if stage_num >= 2:
-                txt_2 = f"2. {txt_2_yr}"
-                color_2 = '#C0C0C0' # Silver
-            else:
-                txt_2 = "2."
-                color_2 = '#808080' # Dim gray? Or Silver but empty?
-                # User said "different colors". 
-                # Let's keep the number colored, but text empty?
-                # "When Stage 1 playing, display 1. 2024 and 2, 3 is empty"
-                # This implies "1." and "2024" are separate? Or just the line content?
-                # Assuming "2." is visible but no year.
+            colors = ['#FFD700', '#C0C0C0', '#CD7F32'] # Gold, Silver, Bronze
             
-            # Let's render "2." and "Year" separately to handle "empty"
-            rank_2_num = self.create_text_clip(
-                "2.", 
-                70, video.duration, ('left', 'center'), 
-                color='#C0C0C0', stroke_color='black', stroke_width=3
-            ).with_position((50, 650))
-            ranking_clips.append(rank_2_num)
-            
-            if stage_num >= 2:
-                rank_2_yr_clip = self.create_text_clip(
-                    txt_2_yr, 
-                    70, video.duration, ('left', 'center'), 
-                    color='white', stroke_color='black', stroke_width=3
-                ).with_position((150, 650))
-                ranking_clips.append(rank_2_yr_clip)
-
-            # Line 3 (Bronze)
-            txt_3_num = "3."
-            txt_3_yr = years[2]
-            rank_3_num = self.create_text_clip(
-                "3.", 
-                70, video.duration, ('left', 'center'), 
-                color='#CD7F32', stroke_color='black', stroke_width=3
-            ).with_position((50, 800))
-            ranking_clips.append(rank_3_num)
-            
-            if stage_num >= 3:
-                rank_3_yr_clip = self.create_text_clip(
-                    txt_3_yr, 
-                    70, video.duration, ('left', 'center'), 
-                    color='white', stroke_color='black', stroke_width=3
-                ).with_position((150, 800))
-                ranking_clips.append(rank_3_yr_clip)
+            for i in range(3):
+                rank_idx = i + 1 # 1, 2, 3
+                current_y = y_start + (i * y_gap)
+                color = colors[i]
                 
-            # Composite stage
-            # We need a black background for the whole 1080x1920 canvas first?
-            # Or just CompositeVideoClip defaults to transparent/black? Defaults to transparent usually.
-            # But the HEADER will provide the top background.
-            # What about the gap on sides if cropped?
-            # We cropped Y, so X is still 1080.
+                # Number Clip ("1.") - Always visible
+                clip_num = self.create_text_clip(
+                    f"{rank_idx}.", 
+                    70, video.duration, ('left', 'center'), 
+                    color=color, stroke_color='black', stroke_width=3
+                ).with_position((x_num, current_y))
+                ranking_clips.append(clip_num)
+                
+                # Year Clip (Only if revealed)
+                if stage_num >= rank_idx:
+                    clip_year = self.create_text_clip(
+                        str(years[i]), 
+                        70, video.duration, ('left', 'center'), 
+                        color=color, # Year uses Rank Color
+                        stroke_color='black', stroke_width=3
+                    ).with_position((x_year, current_y))
+                    ranking_clips.append(clip_year)
             
+            # Composite stage
             stage_composite = CompositeVideoClip(
                 [video_positioned] + ranking_clips, 
                 size=(1080, 1920)
-            )
+            ).with_duration(video.duration) # Explicitly set duration
+            
             final_clips.append(stage_composite)
             
         # Concatenate stages
-        print("      Joining clips...")
+        print(f"      Joining {len(final_clips)} clips...")
         full_video = concatenate_videoclips(final_clips)
+        print(f"      Total Duration: {full_video.duration:.2f}s")
         
         # Add Header (Static Overlay)
         clean_title = scenario.title.replace('**', '').upper()
-        # Ensure title fits? We'll rely on create_header
-        
         header_clip = self.create_header(clean_title, full_video.duration)
         
         # Final Composite
         final_video = CompositeVideoClip([full_video, header_clip], size=(1080, 1920))
+        final_video = final_video.with_duration(full_video.duration)
         
         # Output logic
         scenario_dir = self.output_dir / scenario.id
@@ -312,6 +276,7 @@ class Editor:
         
         print(f"   ✅ Final cut saved: {output_path}")
         return str(output_path)
+
 
 
 def assemble_video(scenario: Scenario, video_clips: List[VideoClip], 

@@ -84,56 +84,119 @@ class Editor:
         return parts
 
     def create_header(self, title: str, duration: float) -> CompositeVideoClip:
-        """Creates a black header bar with rich text title."""
+        """
+        Creates a black header bar with simulated rich text title.
+        Implements manual word wrapping with multi-color support.
+        """
         header_height = 350
+        max_content_width = 1000
+        font_size = 80
+        line_height = 90  # font_size * 1.1ish
+        space_width = 25  # Estimated pixels for a space
+        
         # Black background
         bg = TextClip(text=" ", size=(1080, header_height), color='black', bg_color='black', font_size=10, font=self.font).with_duration(duration)
         
-        # Prepare for Pango Markup (Rich Text)
         try:
-            # 1. Convert title to upper
-            # 2. Split by **
-            # 3. Construct XML-like markup
-            pango_title = title.upper()
-            parts = pango_title.split('**')
-            markup_text = ""
-            for i, part in enumerate(parts):
+            # 1. Parse into colored words
+            # Input: "WHAT IF **RUSSIA** INVADED?"
+            # Strategy: Split by **, then split by space
+            clean_title = title.upper()
+            parts_raw = clean_title.split('**')
+            
+            word_objs = [] # List of {'text': str, 'color': str, 'clip': TextClip}
+            
+            for i, part in enumerate(parts_raw):
                 if not part: continue
-                # Escape minimal xml entities just in case
-                safe_part = part.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+                is_bold = (i % 2 == 1)
+                curr_color = 'cyan' if is_bold else 'white'
                 
-                if i % 2 == 1:
-                    # Emphasized part (Cyan)
-                    markup_text += f"<span foreground='#00FFFF' weight='bold'>{safe_part}</span>"
+                print(f"DEBUG: Part '{part}' -> Bold: {is_bold} -> Color: {curr_color}")
+                
+                # Split into individual words
+                words = part.split()
+                for w in words:
+                    # Create clip to measure it (and use later)
+                    # Removing method='label' to rely on default (imagemagick) which handles 'label:' vs 'caption:'
+                    tc = TextClip(
+                        text=w,
+                        font_size=font_size,
+                        font=self.font,
+                        color=curr_color,
+                        stroke_color='black',
+                        stroke_width=2
+                    ).with_duration(duration)
+                    
+                    word_objs.append({
+                        'text': w,
+                        'color': curr_color,
+                        'clip': tc,
+                        'width': tc.w
+                    })
+            
+            if not word_objs:
+                return CompositeVideoClip([bg]).with_position(('center', 'top'))
+
+            # 2. Word Wrap Logic
+            lines = []  # List of [word_obj, word_obj, ...]
+            current_line = []
+            current_line_width = 0
+            
+            for word in word_objs:
+                w_width = word['width']
+                
+                # Check if adding this word exceeds max width
+                # If it's the first word, we have to add it anyway
+                if current_line and (current_line_width + space_width + w_width > max_content_width):
+                    # Push current line and start new
+                    lines.append({'words': current_line, 'width': current_line_width})
+                    current_line = [word]
+                    current_line_width = w_width
                 else:
-                    # Normal part (White)
-                    markup_text += safe_part
+                    # Add to current line
+                    if current_line:
+                        current_line_width += space_width
+                    current_line.append(word)
+                    current_line_width += w_width
             
-            # Center alignment with Pango requires strict markup
-            # usually Pango aligns based on 'pango-view' or wrapping
-            # wrapping in <div align='center'> isn't standard pango spec, 
-            # but moviepy's text_align argument should handle it if size is provided.
+            if current_line:
+                lines.append({'words': current_line, 'width': current_line_width})
+                
+            # 3. Vertical Layout
+            num_lines = len(lines)
+            total_text_height = num_lines * line_height
+            start_y = (header_height - total_text_height) // 2
             
-            text_clip = TextClip(
-                text=markup_text,
-                font_size=80,
-                font=self.font,
-                color='white', # Fallback/Default
-                stroke_color='black',
-                stroke_width=2,
-                method='pango',
-                size=(1000, header_height),
-                text_align="center"
-            ).with_position(('center', 'center')).with_duration(duration)
+            final_clips = [bg]
             
-            return CompositeVideoClip([bg, text_clip]).with_position(('center', 'top'))
+            current_y = start_y
+            
+            for line_data in lines:
+                # Horizontal Center
+                line_w = line_data['width']
+                start_x = (1080 - line_w) // 2
+                current_x = start_x
+                
+                for word in line_data['words']:
+                    # Position clip
+                    # In CompositeVideoClip, pos is (x, y) relative to the composite's canvas
+                    pos = (current_x, current_y)
+                    clip_positioned = word['clip'].with_position(pos)
+                    final_clips.append(clip_positioned)
+                    
+                    current_x += word['width'] + space_width
+                
+                current_y += line_height
+                
+            return CompositeVideoClip(final_clips, size=(1080, header_height)).with_position(('center', 'top'))
 
         except Exception as e:
-            print(f"      ⚠️ Pango rich text failed ({e}), falling back to plain text.")
+            print(f"      ⚠️ Manual Wrapping failed ({e}), falling back to plain text.")
+            import traceback
+            traceback.print_exc()
             
             # Fallback to plain caption
             clean_title = title.replace('**', '').upper()
-            
             text_clip = TextClip(
                 text=clean_title,
                 font_size=80,
@@ -247,7 +310,7 @@ class Editor:
             
             # Config
             x_num = 25     # X position for "1." "2." "3."
-            x_label = 75   # X position for Label Text
+            x_label = 90   # X position for Label Text
             y_start = 500
             y_gap = 150
             
@@ -289,9 +352,8 @@ class Editor:
         full_video = concatenate_videoclips(final_clips)
         print(f"      Total Duration: {full_video.duration:.2f}s")
         
-        # Add Header (Static Overlay)
-        clean_title = scenario.title.replace('**', '').upper()
-        header_clip = self.create_header(clean_title, full_video.duration)
+        # Add Header (Static Overlay) - Pass original title with ** markers for rich text
+        header_clip = self.create_header(scenario.title, full_video.duration)
         
         # Final Composite
         final_video = CompositeVideoClip([full_video, header_clip], size=(1080, 1920))

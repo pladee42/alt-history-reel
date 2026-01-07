@@ -85,8 +85,17 @@ class Distributor:
             return link
             
         except Exception as e:
-            print(f"   ❌ Upload failed: {e}")
-            raise
+            # Check for specific quota error
+            error_str = str(e)
+            if "storageQuotaExceeded" in error_str:
+                print(f"   ⚠️  Drive Upload Skipped: Storage Quota Exceeded.")
+                print(f"       (Service Accounts have 0GB quota. Use a Shared Drive or OAuth user credentials.)")
+                print(f"       Video is saved locally: {file_path}")
+                return None
+            else:
+                print(f"   ❌ Upload failed: {e}")
+                print(f"       Video is saved locally: {file_path}")
+                return None
 
 if __name__ == "__main__":
     # Test stub

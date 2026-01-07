@@ -207,8 +207,8 @@ class Editor:
             ranking_clips = []
             
             # Config
-            x_num = 50     # X position for "1." "2." "3."
-            x_label = 160   # X position for Label Text
+            x_num = 25     # X position for "1." "2." "3."
+            x_label = 75   # X position for Label Text
             y_start = 500
             y_gap = 150
             

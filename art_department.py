@@ -128,6 +128,10 @@ Reply PASS if consistent, FAIL if not."""
         """
         stage = getattr(scenario, f"stage_{stage_num}")
         
+        # Use improved prompt if available (from Prompt Improver)
+        if stage.image_prompt:
+            return stage.image_prompt
+            
         # CRITICAL: Enforce consistent exterior viewpoint
         # The location prompt + "exterior view" ensures we stay outside
         consistency_clause = (

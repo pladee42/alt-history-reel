@@ -35,6 +35,7 @@ def run_phase_2(settings, dry_run: bool = False):
     from screenwriter import generate_scenario
     from archivist import Archivist
     from art_department import ArtDepartment
+    from prompt_improver import PromptImprover
     
     # Initialize archivist early for duplicate checking
     archivist = Archivist(settings.google_sheet_id)
@@ -65,6 +66,13 @@ def run_phase_2(settings, dry_run: bool = False):
                 print(f"   ❌ Failed to generate unique scenario after {max_scenario_tries} attempts")
                 return False
     
+    # Step 2.5: Improve prompts (Quality Enhancement)
+    try:
+        improver = PromptImprover(settings)
+        scenario = improver.improve_scenario(scenario)
+    except Exception as e:
+        print(f"   ⚠️ Prompt Improver failed (skipping): {e}")
+
     # Step 3: Generate keyframes with Vision Gate
     print("\n🖼️ Step 3: Generating keyframes...")
     art = ArtDepartment(settings)

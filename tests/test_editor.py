@@ -24,6 +24,7 @@ class Stage:
 class Scenario:
     id: str
     premise: str
+    title: str
     stage_1: Stage
     stage_2: Stage
     stage_3: Stage
@@ -65,6 +66,7 @@ def run_test():
     scenario = Scenario(
         id="test_assembly_001",
         premise="What if the test script worked perfectly?",
+        title="What if **Test Script** Worked??",
         stage_1=Stage(year="2024", label="The Beginning", description="A peaceful start to the test run."),
         stage_2=Stage(year="2025", label="The Conflict", description="Things get complicated in the middle."),
         stage_3=Stage(year="2030", label="The Resolution", description="A happy ending for the code.")

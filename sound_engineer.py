@@ -176,14 +176,19 @@ class SoundEngineer:
         for stage_num in [1, 2, 3]:
             stage = getattr(scenario, f"stage_{stage_num}")
             
-            # Build mood prompt from stage data
-            mood_prompt = f"{stage.mood}, ambient atmosphere, cinematic"
+            # Build prompt: use improved audio_prompt if available
+            if stage.audio_prompt:
+                prompt_text = stage.audio_prompt
+            else:
+                prompt_text = f"{stage.mood}, ambient atmosphere, cinematic"
+            
             
             clip = self.generate_sfx(
-                mood_prompt=mood_prompt,
+                mood_prompt=prompt_text,
                 stage_num=stage_num,
                 scenario_id=scenario.id,
-                stage_description=stage.description
+                stage_description=stage.description if not stage.audio_prompt else None,
+                duration=self.audio_duration
             )
             audio_clips.append(clip)
             time.sleep(1)  # Brief pause between API calls

@@ -148,10 +148,9 @@ class GCSDistributor:
             blob = self.bucket.blob(title)
             blob.upload_from_filename(file_path, content_type='video/mp4')
             
-            # Make publicly accessible
-            blob.make_public()
-            
-            public_url = blob.public_url
+            # For uniform bucket-level access, public access is controlled at bucket level
+            # The URL format is: https://storage.googleapis.com/{bucket}/{object}
+            public_url = f"https://storage.googleapis.com/{self.bucket_name}/{title}"
             print(f"   ✅ Upload complete: {public_url}")
             return public_url
             

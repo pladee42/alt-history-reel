@@ -41,12 +41,12 @@ class Settings:
     channel_name: str
     google_sheet_id: str
     
+    # Visual style (controls how content looks, not what it's about)
+    style: StyleConfig
+    
     # Storage options (gcs_bucket preferred, drive_folder_id is legacy)
     gcs_bucket: str = ""
     drive_folder_id: str = ""
-    
-    # Visual style (controls how content looks, not what it's about)
-    style: StyleConfig
     
     # Audio mood keywords
     audio_mood: str = "cinematic, atmospheric"
@@ -163,9 +163,9 @@ def load_config(config_path: str) -> Settings:
     settings = Settings(
         channel_name=config_data['channel_name'],
         google_sheet_id=config_data['google_sheet_id'],
+        style=style,
         gcs_bucket=config_data.get('gcs_bucket', ''),
         drive_folder_id=config_data.get('drive_folder_id', ''),
-        style=style,
         gemini_model=gemini_model,
         audio_mood=config_data.get('audio_mood', 'cinematic, atmospheric'),
         image_retries=config_data.get('image_retries', 3),

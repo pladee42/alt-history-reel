@@ -55,8 +55,13 @@ class Archivist:
         if credentials_path:
             creds = Credentials.from_service_account_file(credentials_path, scopes=SCOPES)
         else:
-            # Default to default credentials
-            creds, _ = google.auth.default(scopes=SCOPES)
+            # Check for Cloud Run mounted secret path
+            sa_key_path = os.getenv("GCP_SA_KEY_PATH") or os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
+            if sa_key_path and os.path.exists(sa_key_path):
+                creds = Credentials.from_service_account_file(sa_key_path, scopes=SCOPES)
+            else:
+                # Default to default credentials
+                creds, _ = google.auth.default(scopes=SCOPES)
             
         self.client = gspread.authorize(creds)
         

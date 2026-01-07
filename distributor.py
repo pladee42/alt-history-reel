@@ -32,10 +32,10 @@ class Distributor:
         """
         self.folder_id = folder_id
         
-        # Get credentials path
-        creds_path = credentials_path or os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
+        # Get credentials path (check Cloud Run path first, then default)
+        creds_path = credentials_path or os.getenv("GCP_SA_KEY_PATH") or os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
         if not creds_path:
-            raise ValueError("GOOGLE_APPLICATION_CREDENTIALS not found")
+            raise ValueError("No credentials path found (GCP_SA_KEY_PATH or GOOGLE_APPLICATION_CREDENTIALS)")
         
         # Authenticate
         self.credentials = Credentials.from_service_account_file(creds_path, scopes=SCOPES)
@@ -113,10 +113,10 @@ class GCSDistributor:
         
         self.bucket_name = bucket_name
         
-        # Get credentials path
-        creds_path = credentials_path or os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
+        # Get credentials path (check Cloud Run path first, then default)
+        creds_path = credentials_path or os.getenv("GCP_SA_KEY_PATH") or os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
         
-        if creds_path:
+        if creds_path and os.path.exists(creds_path):
             self.client = storage.Client.from_service_account_json(creds_path)
         else:
             # Use Application Default Credentials (ADC)

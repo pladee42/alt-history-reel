@@ -150,6 +150,18 @@ class SoundEngineer:
             with open(audio_path, 'wb') as f:
                 f.write(response.content)
             
+            # Log cost
+            try:
+                from cost_tracker import cost_tracker
+                cost_tracker.log_fal_call(
+                    model=self.audio_model,
+                    scenario_id=scenario.id,
+                    operation="audio_sfx",
+                    metadata={"duration": duration}
+                )
+            except ImportError:
+                pass
+            
             print(f"      ✅ Saved: {audio_path.name}")
             
             return AudioClip(

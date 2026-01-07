@@ -136,6 +136,15 @@ class Cinematographer:
             with open(video_path, 'wb') as f:
                 f.write(response.content)
             
+            # Log cost
+            try:
+                from cost_tracker import log_video_generation
+                # Extract scenario_id from path (e.g., "output/scenario_xxx/video_1.mp4")
+                scenario_id = video_path.parent.name
+                log_video_generation(self.video_model, scenario_id, self.video_duration)
+            except ImportError:
+                pass
+            
             print(f"      ✅ Saved: {video_path.name}")
             
             return VideoClip(

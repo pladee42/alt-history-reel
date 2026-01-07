@@ -261,6 +261,15 @@ def run_phase_4(settings, dry_run: bool = False):
         archivist = Archivist(settings.google_sheet_id)
         archivist.update_status(scenario.id, "COMPLETED", video_url=video_url or "")
         
+        # Update cost in Google Sheets
+        try:
+            from cost_tracker import cost_tracker
+            scenario_cost = cost_tracker.get_scenario_total(scenario.id)
+            if scenario_cost > 0:
+                archivist.update_cost(scenario.id, scenario_cost)
+        except ImportError:
+            pass
+        
         # Set video URL on scenario object for later use
         scenario.video_url = video_url
         settings._current_final_video = final_video_path
@@ -327,10 +336,13 @@ def main():
     
     if args.dry_run:
         print("🔍 Mode:     DRY RUN (no API calls)")
-    
-    # TODO: Add cost tracking in Phase 5
-    # from cost_tracker import print_cost_summary
-    # print_cost_summary()
+    else:
+        # Print cost tracking summary
+        try:
+            from cost_tracker import cost_tracker
+            cost_tracker.print_summary()
+        except ImportError:
+            pass  # Cost tracking not available
     
     print("=" * 50 + "\n")
 

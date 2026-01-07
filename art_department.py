@@ -220,6 +220,17 @@ Reply PASS if consistent, FAIL if not."""
                 arguments=txt2img_args,
             )
         
+        # Log cost
+        try:
+            from cost_tracker import log_image_generation
+            log_image_generation(
+                self.img2img_model if reference_image else self.txt2img_model,
+                scenario.id,
+                stage=stage_num
+            )
+        except ImportError:
+            pass
+        
         # Download and save the image
         image_url = result["images"][0]["url"]
         image_path = scenario_dir / f"frame_{stage_num}.png"

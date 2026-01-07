@@ -34,7 +34,7 @@ HEADERS = [
     "stage_1_year", "stage_1_label", "stage_1_description", "stage_1_mood", "stage_1_image_prompt", "stage_1_audio_prompt",
     "stage_2_year", "stage_2_label", "stage_2_description", "stage_2_mood", "stage_2_image_prompt", "stage_2_audio_prompt",
     "stage_3_year", "stage_3_label", "stage_3_description", "stage_3_mood", "stage_3_image_prompt", "stage_3_audio_prompt",
-    "status", "created_at", "video_url"
+    "status", "created_at", "video_url", "estimated_cost"  # estimated_cost is last column
 ]
 
 
@@ -245,6 +245,37 @@ class Archivist:
             return True
         except Exception as e:
             print(f"❌ Error updating status: {e}")
+            return False
+    
+    def update_cost(self, scenario_id: str, estimated_cost: float) -> bool:
+        """
+        Update the estimated cost for a scenario.
+        
+        Args:
+            scenario_id: The ID to update
+            estimated_cost: Estimated cost in USD
+            
+        Returns:
+            True if updated, False if not found
+        """
+        try:
+            cell = self.worksheet.find(scenario_id, in_column=1)
+            if not cell:
+                print(f"⚠️ Scenario {scenario_id} not found for cost update.")
+                return False
+            
+            row = cell.row
+            
+            # Update estimated_cost (last column)
+            cost_col = HEADERS.index("estimated_cost") + 1
+            # Format as currency string
+            cost_str = f"${estimated_cost:.4f}"
+            self.worksheet.update_cell(row, cost_col, cost_str)
+            
+            print(f"   💰 Updated cost for {scenario_id}: {cost_str}")
+            return True
+        except Exception as e:
+            print(f"❌ Error updating cost: {e}")
             return False
     
     def _row_to_scenario(self, row: Dict[str, Any]) -> Scenario:

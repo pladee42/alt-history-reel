@@ -203,12 +203,12 @@ class Editor:
             video_positioned = video_cropped.with_position((0, 350))
 
             # RANKING OVERLAY
-            years = [scenario.stage_1.year, scenario.stage_2.year, scenario.stage_3.year]
+            labels = [scenario.stage_1.label, scenario.stage_2.label, scenario.stage_3.label]
             ranking_clips = []
             
             # Config
             x_num = 50     # X position for "1." "2." "3."
-            x_year = 160   # X position for "2024" (Aligned column)
+            x_label = 160   # X position for Label Text
             y_start = 500
             y_gap = 150
             
@@ -227,15 +227,15 @@ class Editor:
                 ).with_position((x_num, current_y))
                 ranking_clips.append(clip_num)
                 
-                # Year Clip (Only if revealed)
+                # Label Clip (Only if revealed)
                 if stage_num >= rank_idx:
-                    clip_year = self.create_text_clip(
-                        str(years[i]), 
-                        70, video.duration, ('left', 'center'), 
-                        color=color, # Year uses Rank Color
+                    clip_label = self.create_text_clip(
+                        str(labels[i]), 
+                        60, video.duration, ('left', 'center'), # Size 60 to fit longer text 
+                        color=color, # Label uses Rank Color
                         stroke_color='black', stroke_width=3
-                    ).with_position((x_year, current_y))
-                    ranking_clips.append(clip_year)
+                    ).with_position((x_label, current_y))
+                    ranking_clips.append(clip_label)
             
             # Composite stage
             stage_composite = CompositeVideoClip(

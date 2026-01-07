@@ -155,6 +155,38 @@ class Archivist:
             print(f"❌ Error updating scenario {scenario.id}: {e}")
             return False
 
+    def get_scenario(self, scenario_id: str) -> Optional[Scenario]:
+        """
+        Get a scenario by ID.
+        
+        Args:
+            scenario_id: The ID to find
+            
+        Returns:
+            Scenario object or None if not found
+        """
+        try:
+            cell = self.worksheet.find(scenario_id, in_column=1)
+            if not cell:
+                return None
+            
+            # Get the whole row
+            row_values = self.worksheet.row_values(cell.row)
+            
+            # Map headers to values
+            row_dict = {}
+            for i, header in enumerate(HEADERS):
+                if i < len(row_values):
+                    row_dict[header] = row_values[i]
+                else:
+                    row_dict[header] = ""
+            
+            return self._row_to_scenario(row_dict)
+            
+        except Exception as e:
+            print(f"❌ Error getting scenario: {e}")
+            return None
+
     def get_pending_scenarios(self, limit: int = 10) -> List[Scenario]:
         """
         Get scenarios with status = PENDING.

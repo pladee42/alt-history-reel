@@ -59,7 +59,9 @@ class PromptImprover:
             formatted_system = system_instruction.format(
                 location=scenario.location_name,
                 style_name=self.settings.style.name,
-                style_suffix=self.settings.style.image_suffix
+                style_suffix=self.settings.style.image_suffix,
+                description=stage.description,
+                mood=stage.mood
             )
 
             try:
@@ -74,16 +76,31 @@ class PromptImprover:
                 
                 result = response.parsed
                 
+                # Fallback if parsed is None but text exists
+                if not result and response.text:
+                    try:
+                        text = response.text.strip()
+                        # Clean markdown code blocks
+                        if text.startswith("```"):
+                            text = text.split("\n", 1)[1]
+                            if text.endswith("```"):
+                                text = text.rsplit("\n", 1)[0]
+                        text = text.strip()
+                        import json
+                        result = json.loads(text)
+                    except Exception as e:
+                        print(f"   ❌ JSON Parsing failed: {e}")
+                
                 # Update the stage data
-                # Note: We must update the dataclass instance
                 if result:
-                    # We might get a dict or an object depending on parsed result structure.
-                    # Google GenAI parsed usually returns a typed object if schema provided, 
-                    # or a dict/list if generic JSON. Let's assume dict for now given "application/json".
-                    # Actually parsed returns a python object (dict/list).
-                    
-                    stage.image_prompt = result.get("image_prompt", "")
-                    stage.audio_prompt = result.get("audio_prompt", "")
+                    # Handle both dict (from json.loads) and object (from parsed)
+                    if isinstance(result, dict):
+                        stage.image_prompt = result.get("image_prompt", "")
+                        stage.audio_prompt = result.get("audio_prompt", "")
+                    else:
+                        # Assume it's a SimpleNamespace or similar object from genai
+                        stage.image_prompt = getattr(result, "image_prompt", "")
+                        stage.audio_prompt = getattr(result, "audio_prompt", "")
                     
                     # Ensure style suffix is enforced if the model missed it, 
                     # but the model should include it if instructed well.

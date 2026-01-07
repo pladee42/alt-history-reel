@@ -183,6 +183,7 @@ Respond with valid JSON."""
         # Build Scenario object
         scenario = Scenario(
             id="",  # Will be auto-generated
+            title=data.get("title", ""),
             premise=data["premise"],
             location_name=data["location_name"],
             location_prompt=data["location_prompt"],

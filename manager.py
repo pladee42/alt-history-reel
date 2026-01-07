@@ -40,7 +40,10 @@ class Settings:
     # Core identifiers
     channel_name: str
     google_sheet_id: str
-    drive_folder_id: str
+    
+    # Storage options (gcs_bucket preferred, drive_folder_id is legacy)
+    gcs_bucket: str = ""
+    drive_folder_id: str = ""
     
     # Visual style (controls how content looks, not what it's about)
     style: StyleConfig
@@ -138,7 +141,7 @@ def load_config(config_path: str) -> Settings:
         raise ValueError(f"Config file is empty: {config_path}")
     
     # Required fields
-    required_fields = ['channel_name', 'google_sheet_id', 'drive_folder_id', 'style']
+    required_fields = ['channel_name', 'google_sheet_id', 'style']
     
     missing = [f for f in required_fields if f not in config_data]
     if missing:
@@ -160,7 +163,8 @@ def load_config(config_path: str) -> Settings:
     settings = Settings(
         channel_name=config_data['channel_name'],
         google_sheet_id=config_data['google_sheet_id'],
-        drive_folder_id=config_data['drive_folder_id'],
+        gcs_bucket=config_data.get('gcs_bucket', ''),
+        drive_folder_id=config_data.get('drive_folder_id', ''),
         style=style,
         gemini_model=gemini_model,
         audio_mood=config_data.get('audio_mood', 'cinematic, atmospheric'),

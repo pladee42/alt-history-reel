@@ -220,36 +220,49 @@ def run_phase_4(settings, dry_run: bool = False):
         
     from editor import assemble_video
     from archivist import Archivist
-    from distributor import Distributor
+    from distributor import Distributor, GCSDistributor
     
     output_dir = settings.output_dir
     
     try:
         final_video_path = assemble_video(scenario, video_clips, audio_clips, output_dir)
         
-        # Upload to Drive
-        if not settings.drive_folder_id or settings.drive_folder_id == "YOUR_DRIVE_FOLDER_ID":
-             print("   ⚠️ Drive Folder ID not configured. Skipping upload.")
-             drive_link = ""
+        # Upload to cloud storage (prefer GCS, fallback to Drive)
+        video_url = None
+        
+        if settings.gcs_bucket:
+            # Use GCS (recommended for GCP deployment)
+            print(f"   📤 Uploading to GCS bucket: {settings.gcs_bucket}")
+            distributor = GCSDistributor(settings.gcs_bucket)
+            video_url = distributor.upload_video(
+                final_video_path, 
+                title=f"{scenario.id}.mp4",
+                description=scenario.premise
+            )
+        elif settings.drive_folder_id and settings.drive_folder_id != "YOUR_DRIVE_FOLDER_ID":
+            # Fallback to Drive (legacy)
+            print(f"   📤 Uploading to Google Drive...")
+            distributor = Distributor(settings.drive_folder_id)
+            video_url = distributor.upload_video(
+                final_video_path, 
+                title=f"{scenario.id}.mp4",
+                description=scenario.premise
+            )
         else:
-             distributor = Distributor(settings.drive_folder_id)
-             drive_link = distributor.upload_video(
-                 final_video_path, 
-                 title=f"{scenario.id}.mp4",
-                 description=scenario.premise
-             )
+            print("   ⚠️ No storage configured. Skipping upload.")
+            video_url = ""
         
         # Update status
         archivist = Archivist(settings.google_sheet_id)
-        archivist.update_status(scenario.id, "COMPLETED", video_url=drive_link)
+        archivist.update_status(scenario.id, "COMPLETED", video_url=video_url or "")
         
         # Set video URL on scenario object for later use
-        scenario.video_url = drive_link
+        scenario.video_url = video_url
         settings._current_final_video = final_video_path
         
         print(f"\n✅ Phase 4 complete! Final video: {final_video_path}")
-        if drive_link:
-            print(f"   ☁️  Drive Link: {drive_link}")
+        if video_url:
+            print(f"   ☁️  Video URL: {video_url}")
             
         return True
         

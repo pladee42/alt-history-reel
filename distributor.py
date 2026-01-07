@@ -97,6 +97,71 @@ class Distributor:
                 print(f"       Video is saved locally: {file_path}")
                 return None
 
+
+class GCSDistributor:
+    """Manages video distribution to Google Cloud Storage."""
+    
+    def __init__(self, bucket_name: str, credentials_path: Optional[str] = None):
+        """
+        Initialize GCS client.
+        
+        Args:
+            bucket_name: Name of the GCS bucket
+            credentials_path: Path to service account JSON (optional, uses ADC if not provided)
+        """
+        from google.cloud import storage
+        
+        self.bucket_name = bucket_name
+        
+        # Get credentials path
+        creds_path = credentials_path or os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
+        
+        if creds_path:
+            self.client = storage.Client.from_service_account_json(creds_path)
+        else:
+            # Use Application Default Credentials (ADC)
+            self.client = storage.Client()
+        
+        self.bucket = self.client.bucket(bucket_name)
+        
+        print(f"🚀 GCS Distributor initialized (Bucket: {bucket_name})")
+    
+    def upload_video(self, file_path: str, title: str, description: str = "") -> Optional[str]:
+        """
+        Upload a video file to GCS.
+        
+        Args:
+            file_path: Local path to the video file
+            title: Filename in GCS (e.g., "scenario_xxx.mp4")
+            description: Not used for GCS but kept for API compatibility
+            
+        Returns:
+            Public URL of the uploaded file, or None on failure
+        """
+        path = Path(file_path)
+        if not path.exists():
+            raise FileNotFoundError(f"Video file not found: {file_path}")
+        
+        print(f"   📤 Uploading to GCS: {title}...")
+        
+        try:
+            blob = self.bucket.blob(title)
+            blob.upload_from_filename(file_path, content_type='video/mp4')
+            
+            # Make publicly accessible
+            blob.make_public()
+            
+            public_url = blob.public_url
+            print(f"   ✅ Upload complete: {public_url}")
+            return public_url
+            
+        except Exception as e:
+            print(f"   ❌ GCS Upload failed: {e}")
+            print(f"       Video is saved locally: {file_path}")
+            return None
+
+
 if __name__ == "__main__":
     # Test stub
     print("Distributor module loaded")
+

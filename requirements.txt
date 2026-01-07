@@ -24,3 +24,4 @@ Pillow>=10.0.0
 
 # Optional: Alternative audio provider
 # elevenlabs>=1.0.0
+google-cloud-storage

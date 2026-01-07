@@ -1,0 +1,29 @@
+# ChronoReel - Realistic Style
+# Controls visual tone - NOT content (content is AI-generated)
+
+channel_name: "ChronoReel"
+google_sheet_id: "1eiCuvFBx-gD2Q1EpLl4EVC4KpMkcyCyQwArgmByJ-6A"
+
+# Storage Options (choose one)
+gcs_bucket: "timeline-b"  # GCS bucket name (recommended for GCP deployment)
+drive_folder_id: "1XwFI_2C4DfixOPOR8J0LBYc6pifpARTc"  # Google Drive folder ID (legacy)
+
+# ============================================
+# VISUAL STYLE
+# ============================================
+style:
+  name: "Photorealistic"
+  # This suffix is appended to ALL image prompts
+  image_suffix: "photorealistic, 4k, vertical 9:16, cinematic lighting, hyper-detailed"
+  # Video animation style
+  video_prompt: "Slow cinematic zoom, atmospheric motion, wind blowing, high detail"
+
+# ============================================
+# AUDIO STYLE
+# ============================================
+audio_mood: "cinematic, atmospheric, dramatic, immersive"
+
+# ============================================
+# GENERATION SETTINGS
+# ============================================
+image_retries: 3  # Max Vision Gate retries

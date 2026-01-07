@@ -25,7 +25,6 @@ venv/
 ENV/
 env/
 .venv/
-realistic.yaml
 
 # Environment variables
 .env

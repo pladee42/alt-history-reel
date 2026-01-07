@@ -70,6 +70,8 @@ def run_phase_2(settings, dry_run: bool = False):
     try:
         improver = PromptImprover(settings)
         scenario = improver.improve_scenario(scenario)
+        # Save improved data (Title, Prompts) to Sheet
+        archivist.update_full_scenario(scenario)
     except Exception as e:
         print(f"   ⚠️ Prompt Improver failed (skipping): {e}")
 

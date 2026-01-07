@@ -95,6 +95,10 @@ class SoundEngineer:
         if stage_description:
             full_prompt = f"{mood_prompt}. Context: {stage_description}"
         
+        # Truncate to avoid API limit (450 chars)
+        if len(full_prompt) > 440:
+            full_prompt = full_prompt[:437] + "..."
+            
         print(f"   🎵 Generating audio for stage {stage_num}...")
         print(f"      Prompt: {full_prompt[:70]}...")
         
@@ -188,7 +192,7 @@ class SoundEngineer:
                 stage_num=stage_num,
                 scenario_id=scenario.id,
                 stage_description=stage.description if not stage.audio_prompt else None,
-                duration=self.audio_duration
+                duration=self.default_duration
             )
             audio_clips.append(clip)
             time.sleep(1)  # Brief pause between API calls

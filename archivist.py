@@ -13,6 +13,7 @@ from typing import Optional, List, Dict, Any
 from datetime import datetime
 
 import gspread
+import google.auth
 from google.oauth2.service_account import Credentials
 from dotenv import load_dotenv
 
@@ -29,10 +30,10 @@ SCOPES = [
 
 # Sheet column headers (must match Scenario.to_dict() keys)
 HEADERS = [
-    "id", "premise", "location_name", "location_prompt",
-    "stage_1_year", "stage_1_label", "stage_1_description", "stage_1_mood",
-    "stage_2_year", "stage_2_label", "stage_2_description", "stage_2_mood",
-    "stage_3_year", "stage_3_label", "stage_3_description", "stage_3_mood",
+    "id", "title", "premise", "location_name", "location_prompt",
+    "stage_1_year", "stage_1_label", "stage_1_description", "stage_1_mood", "stage_1_image_prompt", "stage_1_audio_prompt",
+    "stage_2_year", "stage_2_label", "stage_2_description", "stage_2_mood", "stage_2_image_prompt", "stage_2_audio_prompt",
+    "stage_3_year", "stage_3_label", "stage_3_description", "stage_3_mood", "stage_3_image_prompt", "stage_3_audio_prompt",
     "status", "created_at", "video_url"
 ]
 
@@ -50,20 +51,23 @@ class Archivist:
         """
         self.sheet_id = sheet_id
         
-        # Get credentials path
-        creds_path = credentials_path or os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
-        if not creds_path:
-            raise ValueError("GOOGLE_APPLICATION_CREDENTIALS not found")
+        # Load credentials
+        if credentials_path:
+            creds = Credentials.from_service_account_file(credentials_path, scopes=SCOPES)
+        else:
+            # Default to default credentials
+            creds, _ = google.auth.default(scopes=SCOPES)
+            
+        self.client = gspread.authorize(creds)
         
-        # Authenticate
-        credentials = Credentials.from_service_account_file(creds_path, scopes=SCOPES)
-        self.client = gspread.authorize(credentials)
+        try:
+            self.sheet = self.client.open_by_key(sheet_id)
+            self.worksheet = self.sheet.sheet1
+        except Exception as e:
+            print(f"❌ Error connecting to Sheet {sheet_id}: {e}")
+            raise
         
-        # Open the spreadsheet
-        self.spreadsheet = self.client.open_by_key(sheet_id)
-        self.worksheet = self._get_or_create_worksheet("Scenarios")
-        
-        print(f"📊 Connected to Google Sheet: {self.spreadsheet.title}")
+        print(f"📊 Connected to Google Sheet: {self.sheet.title}")
     
     def _get_or_create_worksheet(self, title: str) -> gspread.Worksheet:
         """Get existing worksheet or create new one with headers."""
@@ -78,24 +82,15 @@ class Archivist:
         return worksheet
     
     def check_duplicate(self, premise: str) -> bool:
-        """
-        Check if a similar premise already exists.
-        
-        Args:
-            premise: The premise to check
-            
-        Returns:
-            True if duplicate found, False otherwise
-        """
-        all_premises = self.worksheet.col_values(2)  # Column B = premise
-        
-        # Simple check: exact match (could be made smarter with embeddings)
-        premise_lower = premise.lower().strip()
-        for existing in all_premises[1:]:  # Skip header
-            if existing.lower().strip() == premise_lower:
-                return True
-        
-        return False
+        """Check if a premise already exists."""
+        try:
+            # Get all premises (assuming column B is Premise... wait, ID is A, Title is B now?)
+            # Let's use get_all_records which is safer but slower, OR just get column values.
+            # Using HEADERS index: premise is index 2 (0-based)
+            premises = self.worksheet.col_values(3) # 1-based index
+            return premise in premises
+        except Exception:
+            return False
     
     def store_scenario(self, scenario: Scenario) -> bool:
         """
@@ -122,6 +117,44 @@ class Archivist:
         
         return True
     
+    def update_full_scenario(self, scenario: Scenario) -> bool:
+        """
+        Update an existing scenario with full data (including improved prompts).
+        
+        Args:
+            scenario: The scenario to update
+        
+        Returns:
+            True if updated, False if not found
+        """
+        try:
+            # Find row by ID (Column 1)
+            cell = self.worksheet.find(scenario.id, in_column=1)
+            if not cell:
+                print(f"⚠️ Scenario {scenario.id} not found in sheet for update.")
+                return False
+            
+            # Convert to row
+            data = scenario.to_dict()
+            row_values = [data.get(header, "") for header in HEADERS]
+            
+            # Update the range
+            # Construct range from row number (e.g. A2:Z2)
+            row_num = cell.row
+            num_cols = len(HEADERS)
+            # A is 1. Convert num_cols to letter?
+            # Easier: update_cell is slow. update_cells or update(range, [[]])
+            
+            # gspread update takes range and values
+            start_cell = f"A{row_num}"
+            self.worksheet.update(values=[row_values], range_name=start_cell, value_input_option='USER_ENTERED')
+            print(f"✅ Updated full scenario data: {scenario.id}")
+            return True
+            
+        except Exception as e:
+            print(f"❌ Error updating scenario {scenario.id}: {e}")
+            return False
+
     def get_pending_scenarios(self, limit: int = 10) -> List[Scenario]:
         """
         Get scenarios with status = PENDING.
@@ -149,59 +182,68 @@ class Archivist:
         Update the status of a scenario.
         
         Args:
-            scenario_id: The scenario ID
-            status: New status (PENDING, IMAGES_DONE, VIDEO_DONE, COMPLETED)
-            video_url: Optional video URL (for COMPLETED status)
+            scenario_id: The ID to update
+            status: New status
+            video_url: Optional video URL
             
         Returns:
-            True if updated successfully
+            True if updated, False if not found
         """
-        # Find the row
         try:
             cell = self.worksheet.find(scenario_id, in_column=1)
-        except gspread.CellNotFound:
-            print(f"❌ Scenario not found: {scenario_id}")
+            if not cell:
+                print(f"⚠️ Scenario {scenario_id} not found.")
+                return False
+            
+            row = cell.row
+            
+            # Update Status (Column 'status')
+            status_col = HEADERS.index("status") + 1
+            self.worksheet.update_cell(row, status_col, status)
+            
+            if video_url:
+                url_col = HEADERS.index("video_url") + 1
+                self.worksheet.update_cell(row, url_col, video_url)
+                
+            return True
+        except Exception as e:
+            print(f"❌ Error updating status: {e}")
             return False
-        
-        row_num = cell.row
-        
-        # Update status (column Q = 17)
-        self.worksheet.update_cell(row_num, 17, status)
-        
-        # Update video_url if provided (column S = 19)
-        if video_url:
-            self.worksheet.update_cell(row_num, 19, video_url)
-        
-        print(f"📝 Updated {scenario_id}: status = {status}")
-        return True
     
     def _row_to_scenario(self, row: Dict[str, Any]) -> Scenario:
-        """Convert a sheet row to Scenario object."""
+        """Convert sheet row dict to Scenario object."""
         return Scenario(
-            id=row.get("id", ""),
+            id=str(row.get("id", "")),
+            title=str(row.get("title", "")),
             premise=row.get("premise", ""),
             location_name=row.get("location_name", ""),
             location_prompt=row.get("location_prompt", ""),
             stage_1=StageData(
-                year=row.get("stage_1_year", ""),
+                year=str(row.get("stage_1_year", "")),
                 label=row.get("stage_1_label", ""),
                 description=row.get("stage_1_description", ""),
                 mood=row.get("stage_1_mood", ""),
+                image_prompt=row.get("stage_1_image_prompt", ""),
+                audio_prompt=row.get("stage_1_audio_prompt", "")
             ),
             stage_2=StageData(
-                year=row.get("stage_2_year", ""),
+                year=str(row.get("stage_2_year", "")),
                 label=row.get("stage_2_label", ""),
                 description=row.get("stage_2_description", ""),
                 mood=row.get("stage_2_mood", ""),
+                image_prompt=row.get("stage_2_image_prompt", ""),
+                audio_prompt=row.get("stage_2_audio_prompt", "")
             ),
             stage_3=StageData(
-                year=row.get("stage_3_year", ""),
+                year=str(row.get("stage_3_year", "")),
                 label=row.get("stage_3_label", ""),
                 description=row.get("stage_3_description", ""),
                 mood=row.get("stage_3_mood", ""),
+                image_prompt=row.get("stage_3_image_prompt", ""),
+                audio_prompt=row.get("stage_3_audio_prompt", "")
             ),
             status=row.get("status", "PENDING"),
-            created_at=row.get("created_at", ""),
+            created_at=str(row.get("created_at", "")),
             video_url=row.get("video_url", ""),
         )
     

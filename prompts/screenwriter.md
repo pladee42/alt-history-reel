@@ -32,7 +32,7 @@ Respond ONLY with valid JSON in this exact format:
 
 ```json
 {
-    "title": "Short Title (Max 10 words). Use **bold** markdown to emphasize 1-2 KEYWORDS (e.g. 'Why **North Korea** Conquered **USA**')",
+    "title": "Short Title (Max 10 words). Use **bold** markdown to emphasize 1-2 KEYWORDS (e.g. 'What if **North Korea** Conquered **USA**')",
     "premise": "What if [controversial geopolitical event]?",
     "location_name": "Landmark Name, City",
     "location_prompt": "Visual description of the landmark for image generation",

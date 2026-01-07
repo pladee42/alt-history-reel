@@ -11,7 +11,7 @@ import google.genai as genai
 from dotenv import load_dotenv
 
 from screenwriter import Scenario
-from manager import ConfigManager
+
 
 load_dotenv()
 

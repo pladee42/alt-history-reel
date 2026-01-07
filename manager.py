@@ -37,6 +37,9 @@ class Settings:
     # Audio mood keywords
     audio_mood: str = "cinematic, atmospheric"
     
+    # Model settings
+    gemini_model: str = "gemini-3-flash-preview"
+    
     # Generation settings
     image_retries: int = 3
     
@@ -138,12 +141,17 @@ def load_config(config_path: str) -> Settings:
         video_prompt=style_data['video_prompt']
     )
     
+    # Clean Gemini config
+    gemini_config = config_data.get('gemini', {})
+    gemini_model = gemini_config.get('model', 'gemini-3-flash-preview')
+    
     # Create Settings object
     settings = Settings(
         channel_name=config_data['channel_name'],
         google_sheet_id=config_data['google_sheet_id'],
         drive_folder_id=config_data['drive_folder_id'],
         style=style,
+        gemini_model=gemini_model,
         audio_mood=config_data.get('audio_mood', 'cinematic, atmospheric'),
         image_retries=config_data.get('image_retries', 3),
         config_path=config_path

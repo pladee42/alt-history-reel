@@ -1,0 +1,77 @@
+# =============================================================================
+# ChronoReel - GitHub Actions CI/CD Pipeline
+# =============================================================================
+# This workflow:
+# 1. Builds and pushes Docker image to Google Artifact Registry
+# 2. Deploys to Cloud Run Jobs
+# 3. Optionally triggers a test run
+# =============================================================================
+
+name: Deploy to Cloud Run
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:  # Allow manual trigger
+
+env:
+  PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  REGION: asia-southeast1  # Bangkok region
+  SERVICE_NAME: chronoreel
+  ARTIFACT_REGISTRY: asia-southeast1-docker.pkg.dev
+
+jobs:
+  deploy:
+    name: Build and Deploy
+    runs-on: ubuntu-latest
+    
+    permissions:
+      contents: read
+      id-token: write  # Required for Workload Identity Federation
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+          service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker ${{ env.ARTIFACT_REGISTRY }} --quiet
+
+      - name: Build Docker image
+        run: |
+          docker build -t ${{ env.ARTIFACT_REGISTRY }}/${{ env.PROJECT_ID }}/${{ env.SERVICE_NAME }}/${{ env.SERVICE_NAME }}:${{ github.sha }} .
+          docker tag ${{ env.ARTIFACT_REGISTRY }}/${{ env.PROJECT_ID }}/${{ env.SERVICE_NAME }}/${{ env.SERVICE_NAME }}:${{ github.sha }} \
+                     ${{ env.ARTIFACT_REGISTRY }}/${{ env.PROJECT_ID }}/${{ env.SERVICE_NAME }}/${{ env.SERVICE_NAME }}:latest
+
+      - name: Push Docker image
+        run: |
+          docker push ${{ env.ARTIFACT_REGISTRY }}/${{ env.PROJECT_ID }}/${{ env.SERVICE_NAME }}/${{ env.SERVICE_NAME }}:${{ github.sha }}
+          docker push ${{ env.ARTIFACT_REGISTRY }}/${{ env.PROJECT_ID }}/${{ env.SERVICE_NAME }}/${{ env.SERVICE_NAME }}:latest
+
+      - name: Deploy to Cloud Run Jobs
+        run: |
+          gcloud run jobs deploy ${{ env.SERVICE_NAME }} \
+            --image ${{ env.ARTIFACT_REGISTRY }}/${{ env.PROJECT_ID }}/${{ env.SERVICE_NAME }}/${{ env.SERVICE_NAME }}:${{ github.sha }} \
+            --region ${{ env.REGION }} \
+            --memory 2Gi \
+            --cpu 2 \
+            --max-retries 0 \
+            --task-timeout 30m \
+            --set-env-vars "GOOGLE_API_KEY=${{ secrets.GOOGLE_API_KEY }}" \
+            --set-env-vars "FAL_KEY=${{ secrets.FAL_KEY }}" \
+            --set-secrets "GOOGLE_APPLICATION_CREDENTIALS=chronoreel-sa-key:latest"
+
+      - name: Print deployment info
+        run: |
+          echo "✅ Deployment complete!"
+          echo "📍 Region: ${{ env.REGION }}"
+          echo "🏃 To run manually: gcloud run jobs execute ${{ env.SERVICE_NAME }} --region ${{ env.REGION }}"

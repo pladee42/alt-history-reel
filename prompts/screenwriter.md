@@ -32,7 +32,7 @@ Respond ONLY with valid JSON in this exact format:
 
 ```json
 {
-    "title": "Short Title (Max 10 words). Use **bold** markdown to emphasize 1-2 KEYWORDS (e.g. 'What if **North Korea** Conquered **USA**')",
+    "title": "Short, punchy title following this structure: 'What if [NOUN] [VERB] [NOUN]?' Use **bold** to emphasize 1-2 keywords. RULES: (1) Do NOT use 'annexed' - use verbs like 'conquered', 'invaded', 'occupied'. (2) Keep it concise enough to fit on 2 lines max. Example: 'What if **China** Invaded **Australia**?'",
     "premise": "What if [controversial geopolitical event]?",
     "location_name": "Landmark Name, City",
     "location_prompt": "Visual description of the landmark for image generation",

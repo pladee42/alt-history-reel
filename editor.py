@@ -89,10 +89,11 @@ class Editor:
         Implements manual word wrapping with multi-color support.
         """
         header_height = 350
-        max_content_width = 1000
-        font_size = 80
-        line_height = 90  # font_size * 1.1ish
-        space_width = 25  # Estimated pixels for a space
+        horizontal_padding = 40  # Padding on each side
+        max_content_width = 1080 - (horizontal_padding * 2)  # 1000px effective
+        font_size = 75  # Slightly smaller to fit better
+        line_height = 85  # font_size * 1.1ish
+        space_width = 22  # Estimated pixels for a space
         
         # Black background
         bg = TextClip(text=" ", size=(1080, header_height), color='black', bg_color='black', font_size=10, font=self.font).with_duration(duration)

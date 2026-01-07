@@ -18,7 +18,7 @@ on:
 env:
   PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
   REGION: asia-southeast1  # Bangkok region
-  SERVICE_NAME: chronoreel
+  SERVICE_NAME: timeline-b
   ARTIFACT_REGISTRY: asia-southeast1-docker.pkg.dev
 
 jobs:

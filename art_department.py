@@ -224,7 +224,7 @@ Reply PASS if consistent, FAIL if not."""
         try:
             from cost_tracker import log_image_generation
             log_image_generation(
-                self.img2img_model if reference_image else self.txt2img_model,
+                self.img2img_model if reference_image_url else self.txt2img_model,
                 scenario.id,
                 stage=stage_num
             )

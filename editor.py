@@ -124,11 +124,11 @@ class Editor:
         Implements manual word wrapping with multi-color support.
         """
         header_height = 350
-        horizontal_padding = 40  # Padding on each side
-        max_content_width = 1080 - (horizontal_padding * 2)  # 1000px effective
-        font_size = 75  # Slightly smaller to fit better
-        line_height = 85  # font_size * 1.1ish
-        space_width = 22  # Estimated pixels for a space
+        horizontal_padding = 60  # More padding on each side
+        max_content_width = 1080 - (horizontal_padding * 2)  # 960px effective
+        font_size = 65  # Smaller to fit long titles like "WASHINGTON D.C."
+        line_height = 75  # font_size * 1.15
+        space_width = 18  # Adjusted for smaller font
         
         # Black background
         bg = TextClip(text=" ", size=(1080, header_height), color='black', bg_color='black', font_size=10, font=self.font).with_duration(duration)

@@ -15,6 +15,29 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from manager import parse_args, init_settings, print_settings, resolve_config_path
 
 
+def backup_to_gcs(settings, scenario_id: str, step_name: str = ""):
+    """
+    Backup current scenario folder to GCS after each major step.
+    This enables recovery if the pipeline fails mid-way.
+    """
+    if not settings.gcs_bucket:
+        return  # No GCS configured
+    
+    try:
+        from pathlib import Path
+        from distributor import GCSDistributor
+        
+        scenario_folder = Path(settings.output_dir) / scenario_id
+        if not scenario_folder.exists():
+            return
+        
+        distributor = GCSDistributor(settings.gcs_bucket)
+        print(f"   ☁️ Backing up assets to GCS ({step_name})...")
+        distributor.upload_folder(str(scenario_folder), scenario_id)
+    except Exception as e:
+        print(f"   ⚠️ GCS backup failed (non-fatal): {e}")
+
+
 def run_phase_1(settings, dry_run: bool = False):
     """Phase 1: Config verification (already complete if we got here)."""
     print("✅ Phase 1: Configuration loaded and verified")
@@ -88,6 +111,9 @@ def run_phase_2(settings, dry_run: bool = False):
     # Update status
     archivist.update_status(scenario.id, "IMAGES_DONE")
     
+    # Backup images to GCS
+    backup_to_gcs(settings, scenario.id, "images")
+    
     # Store keyframes info for Phase 3
     settings._current_scenario = scenario
     settings._current_keyframes = keyframes
@@ -142,6 +168,9 @@ def run_phase_3(settings, dry_run: bool = False):
     # Update status
     archivist = Archivist(settings.google_sheet_id)
     archivist.update_status(scenario.id, "ANIMATION_DONE")
+    
+    # Backup videos and audio to GCS
+    backup_to_gcs(settings, scenario.id, "videos+audio")
     
     print("\n✅ Phase 3 complete!")
     return True

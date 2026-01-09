@@ -58,7 +58,8 @@ class Editor:
         
         # Font settings for MoviePy
         # Note: ImageMagick must be installed and configured
-        self.font = "Arial"
+        # Download Arial from GCS in Docker, use local Arial on Mac/Windows
+        self.font = self._get_font_path()
         self.fontsize_header = 120
         self.fontsize_body = 40
         self.color = "yellow"
@@ -67,6 +68,40 @@ class Editor:
         
         print(f"🎬 Editor initialized")
         print(f"   Output: {self.output_dir}")
+        print(f"   Font: {self.font}")
+    
+    def _get_font_path(self) -> str:
+        """Get the font path, downloading from GCS if needed."""
+        import requests
+        
+        # Local cache path for downloaded font
+        cached_font = Path("/tmp/Arial.ttf")
+        
+        # If running locally (Mac/Windows), Arial should be available by name
+        local_arial = Path("/System/Library/Fonts/Supplemental/Arial.ttf")  # Mac path
+        if local_arial.exists():
+            return str(local_arial)
+        
+        # Windows path
+        windows_arial = Path("C:/Windows/Fonts/arial.ttf")
+        if windows_arial.exists():
+            return str(windows_arial)
+        
+        # In Docker: download from GCS if not cached
+        if not cached_font.exists():
+            print("   📥 Downloading Arial font from GCS...")
+            font_url = "https://storage.googleapis.com/timeline-b/ARIAL.TTF"
+            response = requests.get(font_url)
+            if response.status_code == 200:
+                with open(cached_font, 'wb') as f:
+                    f.write(response.content)
+                print("   ✅ Font downloaded successfully")
+            else:
+                print(f"   ⚠️ Failed to download font: {response.status_code}")
+                # Fallback to Liberation Sans
+                return "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf"
+        
+        return str(cached_font)
 
     def parse_rich_title(self, title: str) -> List[Tuple[str, str]]:
         """

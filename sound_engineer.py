@@ -155,7 +155,7 @@ class SoundEngineer:
                 from cost_tracker import cost_tracker
                 cost_tracker.log_fal_call(
                     model=self.audio_model,
-                    scenario_id=scenario.id,
+                    scenario_id=scenario_id,
                     operation="audio_sfx",
                     metadata={"duration": duration}
                 )

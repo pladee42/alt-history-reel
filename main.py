@@ -241,9 +241,14 @@ def run_phase_4(settings, dry_run: bool = False):
             )
             
             # Also upload the assets folder for debugging
-            scenario_folder = output_dir / scenario.id
+            from pathlib import Path
+            scenario_folder = Path(output_dir) / scenario.id
+            print(f"   🔍 Checking scenario folder: {scenario_folder}")
             if scenario_folder.exists():
+                print(f"   📁 Found {len(list(scenario_folder.iterdir()))} files in folder")
                 distributor.upload_folder(str(scenario_folder), scenario.id)
+            else:
+                print(f"   ⚠️ Scenario folder not found: {scenario_folder}")
         elif settings.drive_folder_id and settings.drive_folder_id != "YOUR_DRIVE_FOLDER_ID":
             # Fallback to Drive (legacy)
             print(f"   📤 Uploading to Google Drive...")

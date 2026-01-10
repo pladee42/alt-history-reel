@@ -338,8 +338,16 @@ class Editor:
                           audio_clips: List[AudioClip]) -> str:
         """
         Assemble the final video using the Ranking Layout.
+        
+        Video flow: [Teaser 1.5s] -> [Phase 1] -> [Phase 2] -> [Phase 3]
+        Teaser shows Phase 3 video with all rankings revealed.
+        Title overlay appears for first 5 seconds only.
         """
         print(f"   🎞️ Assembling final cut (Ranking Layout) for: {scenario.premise[:50]}...")
+        
+        # Configurable timing
+        teaser_duration = 1.5  # Duration of Phase 3 teaser at start (configurable)
+        title_duration = 5.0   # How long title overlay is visible
         
         final_clips = []
         
@@ -358,8 +366,61 @@ class Editor:
             a_data = next((a for a in audio_clips if a.stage == stage_num), None)
             if v_data and a_data:
                 ordered_clips.append((stage_num, v_data, a_data))
-
-        # 2. Process Each Stage
+        
+        # Ranking overlay config (shared)
+        labels = [scenario.stage_1.label, scenario.stage_2.label, scenario.stage_3.label]
+        x_num = 25     # X position for "1." "2." "3."
+        x_label = 90   # X position for Label Text
+        y_start = 650  # Y position of first ranking
+        y_gap = 150
+        colors = ['#FFD700', '#C0C0C0', '#CD7F32']  # Gold, Silver, Bronze
+        
+        # 2. Create TEASER clip (Phase 3 video with ALL rankings revealed)
+        print(f"      Creating Teaser ({teaser_duration}s from Phase 3)...")
+        stage3_data = next((item for item in ordered_clips if item[0] == 3), None)
+        if stage3_data:
+            _, v3_data, a3_data = stage3_data
+            teaser_video = VideoFileClip(v3_data.path)
+            teaser_audio = AudioFileClip(a3_data.path)
+            
+            # Clip to teaser duration
+            teaser_video = teaser_video.subclipped(0, min(teaser_duration, teaser_video.duration))
+            teaser_audio = teaser_audio.subclipped(0, min(teaser_duration, teaser_audio.duration))
+            teaser_video = teaser_video.with_audio(teaser_audio)
+            
+            # Crop video
+            teaser_cropped = teaser_video.cropped(y1=0, y2=1920).with_position((0, 0))
+            
+            # Create ALL rankings visible for teaser
+            teaser_ranking_clips = []
+            for i in range(3):
+                rank_idx = i + 1
+                current_y = y_start + (i * y_gap)
+                color = colors[i]
+                
+                # Number Clip
+                clip_num = self.create_text_clip(
+                    f"{rank_idx}.", 70, teaser_duration, ('left', 'center'),
+                    color=color, stroke_color='black', stroke_width=3
+                ).with_position((x_num, current_y))
+                teaser_ranking_clips.append(clip_num)
+                
+                # Label Clip (ALL revealed in teaser)
+                clip_label = self.create_text_clip(
+                    str(labels[i]), 60, teaser_duration, ('left', 'center'),
+                    color=color, stroke_color='black', stroke_width=3
+                ).with_position((x_label, current_y))
+                teaser_ranking_clips.append(clip_label)
+            
+            teaser_composite = CompositeVideoClip(
+                [teaser_cropped] + teaser_ranking_clips,
+                size=(1080, 1920)
+            ).with_duration(teaser_duration)
+            
+            final_clips.append(teaser_composite)
+            print(f"      ✅ Teaser added: {teaser_duration}s")
+        
+        # 3. Process Each Stage (normal progression)
         for stage_num, v_data, a_data in ordered_clips:
             print(f"      Processing Stage {stage_num}...")
             video = VideoFileClip(v_data.path)
@@ -392,17 +453,8 @@ class Editor:
             video_cropped = video.cropped(y1=0, y2=1920)
             video_positioned = video_cropped.with_position((0, 0))
 
-            # RANKING OVERLAY
-            labels = [scenario.stage_1.label, scenario.stage_2.label, scenario.stage_3.label]
+            # RANKING OVERLAY (progressive reveal)
             ranking_clips = []
-            
-            # Config
-            x_num = 25     # X position for "1." "2." "3."
-            x_label = 90   # X position for Label Text
-            y_start = 650  # Original position
-            y_gap = 150
-            
-            colors = ['#FFD700', '#C0C0C0', '#CD7F32'] # Gold, Silver, Bronze
             
             for i in range(3):
                 rank_idx = i + 1 # 1, 2, 3
@@ -440,8 +492,8 @@ class Editor:
         full_video = concatenate_videoclips(final_clips)
         print(f"      Total Duration: {full_video.duration:.2f}s")
         
-        # Add Pill Title Overlay - Pass original title with ** markers for rich text
-        title_clip = self.create_pill_title(scenario.title, full_video.duration)
+        # Add Pill Title Overlay - LIMITED DURATION (5 seconds)
+        title_clip = self.create_pill_title(scenario.title, title_duration)
         
         # Final Composite
         final_video = CompositeVideoClip([full_video, title_clip], size=(1080, 1920))

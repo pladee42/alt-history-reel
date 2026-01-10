@@ -118,134 +118,186 @@ class Editor:
             parts.append((segment, color))
         return parts
 
-    def create_header(self, title: str, duration: float) -> CompositeVideoClip:
+    def create_pill_title(self, title: str, duration: float) -> CompositeVideoClip:
         """
-        Creates a black header bar with simulated rich text title.
-        Implements manual word wrapping with multi-color support.
+        Creates a floating pill-shaped title overlay (Instagram/TikTok style).
+        Returns a transparent composite with the pill positioned near the top.
         """
-        header_height = 350
-        horizontal_padding = 60  # More padding on each side
-        max_content_width = 1080 - (horizontal_padding * 2)  # 960px effective
-        font_size = 65  # Smaller to fit long titles like "WASHINGTON D.C."
-        line_height = 75  # font_size * 1.15
-        space_width = 18  # Adjusted for smaller font
+        from PIL import Image, ImageDraw
+        import numpy as np
         
-        # Black background
-        bg = TextClip(text=" ", size=(1080, header_height), color='black', bg_color='black', font_size=10, font=self.font).with_duration(duration)
+        # Config
+        font_size = 48
+        horizontal_padding = 40
+        vertical_padding = 20
+        text_margin = 10  # Extra margin to prevent text cropping
+        pill_y = 300  # Distance from top of video (moved down)
+        corner_radius = 30
+        bg_opacity = 0.85
+        max_pill_width = 1080 - 80  # 40px margin on each side
         
         try:
-            # 1. Parse into colored words
-            # Input: "WHAT IF **RUSSIA** INVADED?"
-            # Strategy: Split by **, then split by space
-            clean_title = title.upper()
-            parts_raw = clean_title.split('**')
-            
-            word_objs = [] # List of {'text': str, 'color': str, 'clip': TextClip}
+            # Parse title for **emphasis** markers
+            parts_raw = title.split('**')
+            word_objs = []  # List of {'text': str, 'color': str}
+            space_width = 12  # Approximate space width
             
             for i, part in enumerate(parts_raw):
-                if not part: continue
-                is_bold = (i % 2 == 1)
-                curr_color = 'cyan' if is_bold else 'white'
-                
-                print(f"DEBUG: Part '{part}' -> Bold: {is_bold} -> Color: {curr_color}")
+                if not part:
+                    continue
+                is_emphasized = (i % 2 == 1)
+                curr_color = 'cyan' if is_emphasized else 'white'
                 
                 # Split into individual words
                 words = part.split()
                 for w in words:
-                    # Create clip to measure it (and use later)
-                    # Removing method='label' to rely on default (imagemagick) which handles 'label:' vs 'caption:'
                     tc = TextClip(
                         text=w,
                         font_size=font_size,
                         font=self.font,
                         color=curr_color,
-                        stroke_color='black',
-                        stroke_width=2
+                        margin=(text_margin, text_margin),  # Prevent text cropping
                     ).with_duration(duration)
                     
                     word_objs.append({
                         'text': w,
                         'color': curr_color,
                         'clip': tc,
-                        'width': tc.w
+                        'width': tc.w,
+                        'height': tc.h
                     })
             
             if not word_objs:
-                return CompositeVideoClip([bg]).with_position(('center', 'top'))
-
-            # 2. Word Wrap Logic
-            lines = []  # List of [word_obj, word_obj, ...]
-            current_line = []
-            current_line_width = 0
+                display_title = title.replace('**', '')
+                text_clip = TextClip(
+                    text=display_title,
+                    font_size=font_size,
+                    font=self.font,
+                    color='white',
+                ).with_duration(duration)
+                word_objs = [{'clip': text_clip, 'width': text_clip.w, 'height': text_clip.h}]
             
-            for word in word_objs:
-                w_width = word['width']
+            # Calculate total width and height
+            total_width = sum(w['width'] for w in word_objs) + (len(word_objs) - 1) * space_width
+            text_height = max(w['height'] for w in word_objs)
+            
+            # Calculate pill dimensions
+            pill_width = total_width + (horizontal_padding * 2)
+            pill_height = text_height + (vertical_padding * 2)
+            
+            # Check if we need line wrapping
+            needs_wrap = pill_width > max_pill_width
+            
+            if needs_wrap:
+                # Word wrap with color support - split into lines
+                lines = []  # List of {'words': [], 'width': int}
+                current_line = []
+                current_line_width = 0
                 
-                # Check if adding this word exceeds max width
-                # If it's the first word, we have to add it anyway
-                if current_line and (current_line_width + space_width + w_width > max_content_width):
-                    # Push current line and start new
+                for word in word_objs:
+                    w_width = word['width']
+                    if current_line and (current_line_width + space_width + w_width > max_pill_width - horizontal_padding * 2):
+                        lines.append({'words': current_line, 'width': current_line_width})
+                        current_line = [word]
+                        current_line_width = w_width
+                    else:
+                        if current_line:
+                            current_line_width += space_width
+                        current_line.append(word)
+                        current_line_width += w_width
+                
+                if current_line:
                     lines.append({'words': current_line, 'width': current_line_width})
-                    current_line = [word]
-                    current_line_width = w_width
-                else:
-                    # Add to current line
-                    if current_line:
-                        current_line_width += space_width
-                    current_line.append(word)
-                    current_line_width += w_width
-            
-            if current_line:
-                lines.append({'words': current_line, 'width': current_line_width})
                 
-            # 3. Vertical Layout
-            num_lines = len(lines)
-            total_text_height = num_lines * line_height
-            start_y = (header_height - total_text_height) // 2
+                # Calculate pill dimensions for multi-line
+                max_line_width = max(line['width'] for line in lines)
+                pill_width = max_line_width + (horizontal_padding * 2)
+                line_height = text_height
+                pill_height = (line_height * len(lines)) + (vertical_padding * 2)
+                word_objs = None  # Signal multi-line mode
+            else:
+                lines = None
             
-            final_clips = [bg]
+            # Create pill background using PIL
+            pill_img = Image.new('RGBA', (pill_width, pill_height), (0, 0, 0, 0))
+            draw = ImageDraw.Draw(pill_img)
             
-            current_y = start_y
+            # Draw rounded rectangle (pill shape)
+            bg_color = (0, 0, 0, int(255 * bg_opacity))
+            draw.rounded_rectangle(
+                [(0, 0), (pill_width - 1, pill_height - 1)],
+                radius=corner_radius,
+                fill=bg_color
+            )
             
-            for line_data in lines:
-                # Horizontal Center
-                line_w = line_data['width']
-                start_x = (1080 - line_w) // 2
-                current_x = start_x
+            # Convert PIL image to numpy array for MoviePy
+            pill_array = np.array(pill_img)
+            
+            # Create ImageClip from numpy array
+            from moviepy import ImageClip
+            pill_bg = ImageClip(pill_array, is_mask=False, transparent=True).with_duration(duration)
+            
+            # Build text clips
+            clips = [pill_bg]
+            
+            if word_objs:
+                # Single line - position words inline with colors
+                current_x = horizontal_padding
+                text_y = vertical_padding - text_margin  # Adjust for margin
                 
-                for word in line_data['words']:
-                    # Position clip
-                    # In CompositeVideoClip, pos is (x, y) relative to the composite's canvas
-                    pos = (current_x, current_y)
-                    clip_positioned = word['clip'].with_position(pos)
-                    final_clips.append(clip_positioned)
-                    
+                for word in word_objs:
+                    clip_positioned = word['clip'].with_position((current_x - text_margin, text_y))
+                    clips.append(clip_positioned)
                     current_x += word['width'] + space_width
-                
-                current_y += line_height
-                
-            return CompositeVideoClip(final_clips, size=(1080, header_height)).with_position(('center', 'top'))
+            elif lines:
+                # Multi-line mode with colors
+                current_y = vertical_padding - text_margin
+                for line_data in lines:
+                    # Center each line
+                    line_width = line_data['width']
+                    start_x = (pill_width - line_width) // 2
+                    current_x = start_x
+                    
+                    for word in line_data['words']:
+                        clip_positioned = word['clip'].with_position((current_x - text_margin, current_y))
+                        clips.append(clip_positioned)
+                        current_x += word['width'] + space_width
+                    
+                    current_y += line_height
+            
+            # Composite pill background and text
+            pill_composite = CompositeVideoClip(
+                clips,
+                size=(pill_width, pill_height)
+            ).with_duration(duration)
+            
+            # Calculate X position to center pill on screen
+            pill_x = (1080 - pill_width) // 2
+            
+            # Return positioned on full-size transparent canvas
+            return pill_composite.with_position((pill_x, pill_y))
 
         except Exception as e:
-            print(f"      ⚠️ Manual Wrapping failed ({e}), falling back to plain text.")
+            print(f"      ⚠️ Pill title creation failed ({e}), falling back to simple text.")
             import traceback
             traceback.print_exc()
             
-            # Fallback to plain caption
-            clean_title = title.replace('**', '').upper()
+            # Fallback: simple text overlay
+            display_title = title.replace('**', '')
             text_clip = TextClip(
-                text=clean_title,
-                font_size=80,
+                text=display_title,
+                font_size=font_size,
                 font=self.font,
                 color='white',
                 stroke_color='black',
                 stroke_width=2,
+                bg_color='black',
                 method='caption',
-                size=(1000, header_height),
-                text_align="center"
-            ).with_position(('center', 'center')).with_duration(duration)
+                size=(900, None),
+                text_align='center'
+            ).with_position(('center', pill_y)).with_duration(duration)
             
-            return CompositeVideoClip([bg, text_clip]).with_position(('center', 'top'))
+            return text_clip
 
     def create_text_clip(self, text: str, fontsize: int, duration: float, 
                          position: Tuple[str, str] = ('center', 'center'),
@@ -335,10 +387,10 @@ class Editor:
             
             video = video.with_audio(audio)
             
-            # CROP & POSITION VIDEO (Below 350px header)
-            # Crop to fit remaining height (1920-350 = 1570)
-            video_cropped = video.cropped(y1=175, y2=1920-175)
-            video_positioned = video_cropped.with_position((0, 350))
+            # CROP & POSITION VIDEO (Full height - no header bar)
+            # Crop source video to 9:16 aspect ratio (1080x1920)
+            video_cropped = video.cropped(y1=0, y2=1920)
+            video_positioned = video_cropped.with_position((0, 0))
 
             # RANKING OVERLAY
             labels = [scenario.stage_1.label, scenario.stage_2.label, scenario.stage_3.label]
@@ -347,7 +399,7 @@ class Editor:
             # Config
             x_num = 25     # X position for "1." "2." "3."
             x_label = 90   # X position for Label Text
-            y_start = 500
+            y_start = 650  # Original position
             y_gap = 150
             
             colors = ['#FFD700', '#C0C0C0', '#CD7F32'] # Gold, Silver, Bronze
@@ -388,11 +440,11 @@ class Editor:
         full_video = concatenate_videoclips(final_clips)
         print(f"      Total Duration: {full_video.duration:.2f}s")
         
-        # Add Header (Static Overlay) - Pass original title with ** markers for rich text
-        header_clip = self.create_header(scenario.title, full_video.duration)
+        # Add Pill Title Overlay - Pass original title with ** markers for rich text
+        title_clip = self.create_pill_title(scenario.title, full_video.duration)
         
         # Final Composite
-        final_video = CompositeVideoClip([full_video, header_clip], size=(1080, 1920))
+        final_video = CompositeVideoClip([full_video, title_clip], size=(1080, 1920))
         final_video = final_video.with_duration(full_video.duration)
         
         # Output logic

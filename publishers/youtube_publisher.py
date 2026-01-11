@@ -225,12 +225,13 @@ class YouTubePublisher(BasePublisher):
                     'title': title,
                     'description': description,
                     'tags': tags,
-                    'categoryId': '22',  # People & Blogs (common for Shorts)
+                    'categoryId': '27',  # Education - fits "what if?" history content
                 },
                 'status': {
                     'privacyStatus': 'public',
                     'selfDeclaredMadeForKids': False,
                     'madeForKids': False,
+                    'containsSyntheticMedia': True,  # AI-generated content disclosure
                 },
             }
             

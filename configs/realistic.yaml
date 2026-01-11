@@ -27,3 +27,37 @@ audio_mood: "cinematic, atmospheric, dramatic, immersive"
 # GENERATION SETTINGS
 # ============================================
 image_retries: 3  # Max Vision Gate retries
+
+# ============================================
+# SOCIAL MEDIA PUBLISHING
+# ============================================
+social:
+  enabled: false  # Master toggle for social publishing
+  
+  # Platform toggles (enable individually)
+  instagram_enabled: false
+  facebook_enabled: false
+  tiktok_enabled: false
+  youtube_enabled: false
+  
+  # OAuth token file paths (for local development)
+  meta_token_path: "secrets/meta_token.json"
+  tiktok_token_path: "secrets/tiktok_token.json"
+  youtube_token_path: "secrets/youtube_token.pickle"
+  
+  # Secret Manager secret names (for Cloud Run deployment)
+  # These are used when running on GCP instead of local file paths
+  # youtube_token_secret: "youtube-oauth-token"
+  # tiktok_token_secret: "tiktok-oauth-token"
+  # meta_token_secret: "meta-oauth-token"
+  
+  # Business/Creator account IDs (fill after OAuth setup)
+  instagram_account_id: ""
+  facebook_page_id: ""
+  tiktok_open_id: ""
+  youtube_channel_id: ""
+  
+  # Publishing behavior
+  publish_delay_seconds: 60  # Delay between platforms to avoid rate limits
+  retry_on_failure: true
+  max_retries: 3

@@ -55,6 +55,7 @@ output/
 *.gsheet
 
 # Google credentials
+secrets/
 *.json
 !package.json
 service_account.json

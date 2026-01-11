@@ -34,6 +34,47 @@ class StyleConfig:
 
 
 @dataclass
+class SocialConfig:
+    """Social media publishing configuration."""
+    enabled: bool = False
+    
+    # Platform toggles
+    instagram_enabled: bool = False
+    facebook_enabled: bool = False
+    tiktok_enabled: bool = False
+    youtube_enabled: bool = False
+    
+    # Token paths
+    meta_token_path: str = "secrets/meta_token.json"
+    tiktok_token_path: str = "secrets/tiktok_token.json"
+    youtube_token_path: str = "secrets/youtube_token.json"
+    
+    # Account IDs
+    instagram_account_id: str = ""
+    facebook_page_id: str = ""
+    tiktok_open_id: str = ""
+    youtube_channel_id: str = ""
+    
+    # Behavior
+    publish_delay_seconds: int = 60
+    retry_on_failure: bool = True
+    max_retries: int = 3
+    
+    def get_enabled_platforms(self) -> list:
+        """Return list of enabled platform names."""
+        platforms = []
+        if self.instagram_enabled:
+            platforms.append('instagram')
+        if self.facebook_enabled:
+            platforms.append('facebook')
+        if self.tiktok_enabled:
+            platforms.append('tiktok')
+        if self.youtube_enabled:
+            platforms.append('youtube')
+        return platforms
+
+
+@dataclass
 class Settings:
     """Configuration settings loaded from YAML config file."""
     
@@ -56,6 +97,9 @@ class Settings:
     
     # Generation settings
     image_retries: int = 3
+    
+    # Social media publishing
+    social: Optional['SocialConfig'] = None
     
     # Runtime paths (set after initialization)
     config_path: str = ""
@@ -159,6 +203,26 @@ def load_config(config_path: str) -> Settings:
     gemini_config = config_data.get('gemini', {})
     gemini_model = gemini_config.get('model', 'gemini-3-flash-preview')
     
+    # Parse social config (optional)
+    social_data = config_data.get('social', {})
+    social = SocialConfig(
+        enabled=social_data.get('enabled', False),
+        instagram_enabled=social_data.get('instagram_enabled', False),
+        facebook_enabled=social_data.get('facebook_enabled', False),
+        tiktok_enabled=social_data.get('tiktok_enabled', False),
+        youtube_enabled=social_data.get('youtube_enabled', False),
+        meta_token_path=social_data.get('meta_token_path', 'secrets/meta_token.json'),
+        tiktok_token_path=social_data.get('tiktok_token_path', 'secrets/tiktok_token.json'),
+        youtube_token_path=social_data.get('youtube_token_path', 'secrets/youtube_token.json'),
+        instagram_account_id=social_data.get('instagram_account_id', ''),
+        facebook_page_id=social_data.get('facebook_page_id', ''),
+        tiktok_open_id=social_data.get('tiktok_open_id', ''),
+        youtube_channel_id=social_data.get('youtube_channel_id', ''),
+        publish_delay_seconds=social_data.get('publish_delay_seconds', 60),
+        retry_on_failure=social_data.get('retry_on_failure', True),
+        max_retries=social_data.get('max_retries', 3),
+    )
+    
     # Create Settings object
     settings = Settings(
         channel_name=config_data['channel_name'],
@@ -169,6 +233,7 @@ def load_config(config_path: str) -> Settings:
         gemini_model=gemini_model,
         audio_mood=config_data.get('audio_mood', 'cinematic, atmospheric'),
         image_retries=config_data.get('image_retries', 3),
+        social=social,
         config_path=config_path
     )
     
@@ -195,6 +260,13 @@ def print_settings(settings: Settings, verbose: bool = False) -> None:
     print(f"🎨 Style:    {settings.style.name}")
     print(f"🔊 Mood:     {settings.audio_mood}")
     print(f"🔄 Retries:  {settings.image_retries}")
+    
+    # Social publishing status
+    if settings.social and settings.social.enabled:
+        platforms = settings.social.get_enabled_platforms()
+        print(f"📱 Social:   {', '.join(platforms) if platforms else 'No platforms enabled'}")
+    else:
+        print(f"📱 Social:   Disabled")
     
     if verbose:
         print(f"\n📷 Image Suffix: {settings.style.image_suffix}")

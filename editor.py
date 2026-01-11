@@ -375,20 +375,35 @@ class Editor:
         y_gap = 150
         colors = ['#FFD700', '#C0C0C0', '#CD7F32']  # Gold, Silver, Bronze
         
-        # 2. Create TEASER clip (Phase 3 video with ALL rankings revealed)
+        # 2. PRE-LOAD all video/audio clips ONCE (memory optimization)
+        loaded_clips = {}  # {stage_num: (video, audio, target_duration)}
+        for stage_num, v_data, a_data in ordered_clips:
+            print(f"      Loading Stage {stage_num}...")
+            video = VideoFileClip(v_data.path)
+            audio = AudioFileClip(a_data.path)
+            target_duration = max(video.duration, audio.duration)
+            
+            # Handle Video (Loop if too short)
+            if video.duration < target_duration:
+                loop_count = int(target_duration // video.duration) + 1
+                video = concatenate_videoclips([video] * loop_count)
+            video = video.subclipped(0, target_duration)
+            
+            # Handle Audio (Loop if too short)
+            if audio.duration < target_duration:
+                audio = AudioLoop(duration=target_duration).apply(audio)
+            audio = audio.subclipped(0, target_duration)
+            
+            video = video.with_audio(audio)
+            loaded_clips[stage_num] = (video, target_duration)
+        
+        # 3. Create TEASER clip (reusing Phase 3 video - no double loading!)
         print(f"      Creating Teaser ({teaser_duration}s from Phase 3)...")
-        stage3_data = next((item for item in ordered_clips if item[0] == 3), None)
-        if stage3_data:
-            _, v3_data, a3_data = stage3_data
-            teaser_video = VideoFileClip(v3_data.path)
-            teaser_audio = AudioFileClip(a3_data.path)
+        if 3 in loaded_clips:
+            stage3_video, _ = loaded_clips[3]
             
-            # Clip to teaser duration
-            teaser_video = teaser_video.subclipped(0, min(teaser_duration, teaser_video.duration))
-            teaser_audio = teaser_audio.subclipped(0, min(teaser_duration, teaser_audio.duration))
-            teaser_video = teaser_video.with_audio(teaser_audio)
-            
-            # Crop video
+            # Extract first N seconds for teaser (subclip reuses existing video in memory)
+            teaser_video = stage3_video.subclipped(0, min(teaser_duration, stage3_video.duration))
             teaser_cropped = teaser_video.cropped(y1=0, y2=1920).with_position((0, 0))
             
             # Create ALL rankings visible for teaser
@@ -420,33 +435,10 @@ class Editor:
             final_clips.append(teaser_composite)
             print(f"      ✅ Teaser added: {teaser_duration}s")
         
-        # 3. Process Each Stage (normal progression)
+        # 4. Process Each Stage using pre-loaded clips (normal progression)
         for stage_num, v_data, a_data in ordered_clips:
-            print(f"      Processing Stage {stage_num}...")
-            video = VideoFileClip(v_data.path)
-            audio = AudioFileClip(a_data.path)
-            
-            print(f"         src_video: {video.duration:.2f}s, src_audio: {audio.duration:.2f}s")
-            
-            # Determine target duration (Max of both to avoid cutting good footage)
-            target_duration = max(video.duration, audio.duration)
-            
-            # 1. Handle Video (Loop if too short)
-            if video.duration < target_duration:
-                loop_count = int(target_duration // video.duration) + 1
-                video = concatenate_videoclips([video] * loop_count)
-            video = video.subclipped(0, target_duration)
-            
-            # 2. Handle Audio (Loop if too short)
-            if audio.duration < target_duration:
-                # Use AudioLoop effect for safer looping
-                audio = AudioLoop(duration=target_duration).apply(audio)
-            
-            # Ensure hard limits
-            video = video.subclipped(0, target_duration)
-            audio = audio.subclipped(0, target_duration)
-            
-            video = video.with_audio(audio)
+            print(f"      Compositing Stage {stage_num}...")
+            video, target_duration = loaded_clips[stage_num]
             
             # CROP & POSITION VIDEO (Full height - no header bar)
             # Crop source video to 9:16 aspect ratio (1080x1920)

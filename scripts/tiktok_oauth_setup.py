@@ -110,7 +110,31 @@ def load_client_secrets() -> dict:
         return json.load(f)
 
 
-def exchange_code_for_token(code: str, client_key: str, client_secret: str, redirect_uri: str) -> dict:
+def generate_pkce_pair():
+    """Generate PKCE code_verifier and code_challenge pair.
+    
+    TikTok Desktop Login Kit requires:
+    - code_verifier: 43-128 chars, unreserved chars only (A-Z, a-z, 0-9, -, ., _, ~)
+    - code_challenge: HEXADECIMAL(SHA256(code_verifier)) - NOT Base64URL!
+    """
+    import hashlib
+    import secrets as secrets_module
+    import string
+    
+    # Generate code_verifier using only unreserved characters
+    # TikTok spec: A-Z, a-z, 0-9, -, ., _, ~
+    unreserved_chars = string.ascii_letters + string.digits + '-._~'
+    code_verifier = ''.join(secrets_module.choice(unreserved_chars) for _ in range(64))
+    
+    # Generate code_challenge = HEX(SHA256(code_verifier))
+    # TikTok uses hex encoding, NOT Base64URL
+    sha256_hash = hashlib.sha256(code_verifier.encode('ascii')).hexdigest()
+    code_challenge = sha256_hash
+    
+    return code_verifier, code_challenge
+
+
+def exchange_code_for_token(code: str, client_key: str, client_secret: str, redirect_uri: str, code_verifier: str) -> dict:
     """Exchange authorization code for access token."""
     response = requests.post(
         TOKEN_URL,
@@ -121,6 +145,7 @@ def exchange_code_for_token(code: str, client_key: str, client_secret: str, redi
             'code': code,
             'grant_type': 'authorization_code',
             'redirect_uri': redirect_uri,
+            'code_verifier': code_verifier,
         }
     )
     
@@ -179,14 +204,20 @@ def main():
     import secrets as secrets_module
     state = secrets_module.token_urlsafe(16)
     
-    # Build authorization URL
+    # Generate PKCE pair (required by TikTok)
+    code_verifier, code_challenge = generate_pkce_pair()
+    print(f"🔐 PKCE code_challenge generated")
+    
+    # Build authorization URL with PKCE
     auth_url = (
         f"{AUTH_URL}?"
         f"client_key={client_key}&"
         f"scope={SCOPES}&"
         f"response_type=code&"
         f"redirect_uri={redirect_uri}&"
-        f"state={state}"
+        f"state={state}&"
+        f"code_challenge={code_challenge}&"
+        f"code_challenge_method=S256"
     )
     
     print("\n🔐 Starting OAuth flow...")
@@ -235,7 +266,7 @@ def main():
     print("\n🔄 Exchanging code for access token...")
     
     try:
-        token_data = exchange_code_for_token(code, client_key, client_secret, redirect_uri)
+        token_data = exchange_code_for_token(code, client_key, client_secret, redirect_uri, code_verifier)
         
         if 'access_token' not in token_data:
             error = token_data.get('error', 'Unknown error')

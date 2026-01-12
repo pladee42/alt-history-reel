@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Timeline B - Post to TikTok</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            min-height: 100vh;
+            color: #fff;
+        }
+        
+        .container {
+            max-width: 480px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .logo {
+            font-size: 32px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #ff0050, #00f2ea);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .tagline {
+            color: #888;
+            margin-top: 5px;
+        }
+        
+        /* Step indicator */
+        .steps {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 30px;
+        }
+        
+        .step {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            background: rgba(255,255,255,0.1);
+            color: #666;
+            transition: all 0.3s ease;
+        }
+        
+        .step.active {
+            background: linear-gradient(135deg, #ff0050, #00f2ea);
+            color: white;
+        }
+        
+        .step.completed {
+            background: #00f2ea;
+            color: #000;
+        }
+        
+        /* Cards */
+        .card {
+            background: rgba(255,255,255,0.05);
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 20px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .card-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        /* Account section */
+        .account-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 12px;
+        }
+        
+        .avatar {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #ff0050, #00f2ea);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+        }
+        
+        .account-details {
+            flex: 1;
+        }
+        
+        .account-name {
+            font-weight: 600;
+        }
+        
+        .account-handle {
+            color: #888;
+            font-size: 14px;
+        }
+        
+        .connected-badge {
+            background: #00f2ea;
+            color: #000;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        
+        /* Video preview */
+        .video-preview {
+            background: #000;
+            border-radius: 12px;
+            aspect-ratio: 9/16;
+            max-height: 300px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .video-preview video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .video-placeholder {
+            text-align: center;
+            color: #666;
+        }
+        
+        .video-placeholder .icon {
+            font-size: 48px;
+            margin-bottom: 10px;
+        }
+        
+        /* Form elements */
+        .form-group {
+            margin-bottom: 16px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #ccc;
+        }
+        
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
+            width: 100%;
+            padding: 12px;
+            background: rgba(0,0,0,0.3);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 8px;
+            color: #fff;
+            font-size: 16px;
+        }
+        
+        .form-group textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+        
+        /* Privacy options */
+        .privacy-options {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        
+        .privacy-option {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 8px;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: all 0.2s ease;
+        }
+        
+        .privacy-option:hover {
+            background: rgba(255,255,255,0.05);
+        }
+        
+        .privacy-option.selected {
+            border-color: #00f2ea;
+            background: rgba(0,242,234,0.1);
+        }
+        
+        .privacy-option input[type="radio"] {
+            display: none;
+        }
+        
+        .radio-indicator {
+            width: 20px;
+            height: 20px;
+            border: 2px solid #666;
+            border-radius: 50%;
+            position: relative;
+        }
+        
+        .privacy-option.selected .radio-indicator {
+            border-color: #00f2ea;
+        }
+        
+        .privacy-option.selected .radio-indicator::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 10px;
+            height: 10px;
+            background: #00f2ea;
+            border-radius: 50%;
+        }
+        
+        /* Checkboxes */
+        .checkbox-group {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .checkbox-item input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            accent-color: #00f2ea;
+        }
+        
+        /* Buttons */
+        .btn {
+            display: block;
+            width: 100%;
+            padding: 16px;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #ff0050, #ff4081);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(255,0,80,0.3);
+        }
+        
+        .btn-tiktok {
+            background: #000;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+        
+        .btn-tiktok .tiktok-logo {
+            font-size: 24px;
+        }
+        
+        .btn-secondary {
+            background: rgba(255,255,255,0.1);
+            color: white;
+            margin-top: 10px;
+        }
+        
+        /* AI disclosure */
+        .ai-disclosure {
+            background: rgba(255,193,7,0.1);
+            border: 1px solid rgba(255,193,7,0.3);
+            border-radius: 8px;
+            padding: 12px;
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+        
+        .ai-disclosure .icon {
+            font-size: 20px;
+        }
+        
+        .ai-disclosure .text {
+            font-size: 14px;
+            color: #ffc107;
+        }
+        
+        /* Policy notice */
+        .policy-notice {
+            font-size: 12px;
+            color: #888;
+            text-align: center;
+            margin-top: 16px;
+        }
+        
+        .policy-notice a {
+            color: #00f2ea;
+        }
+        
+        /* Success screen */
+        .success-screen {
+            text-align: center;
+            padding: 40px 20px;
+        }
+        
+        .success-icon {
+            font-size: 80px;
+            margin-bottom: 20px;
+        }
+        
+        .success-title {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+        
+        .success-message {
+            color: #888;
+            margin-bottom: 30px;
+        }
+        
+        /* Progress bar for uploading */
+        .upload-progress {
+            background: rgba(0,0,0,0.3);
+            border-radius: 10px;
+            height: 8px;
+            overflow: hidden;
+            margin: 20px 0;
+        }
+        
+        .upload-progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #ff0050, #00f2ea);
+            width: 0%;
+            transition: width 0.5s ease;
+            animation: pulse 1.5s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+        
+        /* Screen visibility */
+        .screen {
+            display: none;
+        }
+        
+        .screen.active {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        /* Disabled state */
+        .disabled {
+            opacity: 0.5;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="logo">Timeline B</div>
+            <p class="tagline">AI-Generated Alternative History</p>
+        </header>
+        
+        <!-- Step Indicator -->
+        <div class="steps">
+            <div class="step active" id="step1">1</div>
+            <div class="step" id="step2">2</div>
+            <div class="step" id="step3">3</div>
+            <div class="step" id="step4">4</div>
+        </div>
+        
+        <!-- Screen 1: Connect TikTok Account -->
+        <div class="screen active" id="screen1">
+            <div class="card">
+                <div class="card-title">
+                    🔗 Connect Your TikTok Account
+                </div>
+                <p style="color: #888; margin-bottom: 20px;">
+                    Authorize Timeline B to post videos on your behalf. You can revoke access at any time.
+                </p>
+                <button class="btn btn-tiktok" onclick="goToScreen(2)">
+                    <span class="tiktok-logo">🎵</span>
+                    Continue with TikTok
+                </button>
+            </div>
+            
+            <div class="policy-notice">
+                By continuing, you agree to our 
+                <a href="terms.html">Terms of Service</a> and 
+                <a href="privacy.html">Privacy Policy</a>
+            </div>
+        </div>
+        
+        <!-- Screen 2: Select Content (After Auth) -->
+        <div class="screen" id="screen2">
+            <div class="card">
+                <div class="card-title">
+                    👤 Connected Account
+                </div>
+                <div class="account-info">
+                    <div class="avatar">T</div>
+                    <div class="account-details">
+                        <div class="account-name">Timeline B</div>
+                        <div class="account-handle">@timelineb_ai</div>
+                    </div>
+                    <span class="connected-badge">✓ Connected</span>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-title">
+                    🎬 Select Video to Post
+                </div>
+                <div class="video-preview">
+                    <div class="video-placeholder">
+                        <div class="icon">📹</div>
+                        <p>What if Rome Never Fell?</p>
+                        <p style="font-size: 12px; margin-top: 5px;">0:45 • 1080x1920</p>
+                    </div>
+                </div>
+                <button class="btn btn-primary" onclick="goToScreen(3)" style="margin-top: 16px;">
+                    Continue to Edit Details
+                </button>
+            </div>
+        </div>
+        
+        <!-- Screen 3: Edit Post Details -->
+        <div class="screen" id="screen3">
+            <div class="card">
+                <div class="card-title">
+                    ✏️ Edit Post Details
+                </div>
+                
+                <div class="form-group">
+                    <label>Caption (Editable)</label>
+                    <textarea id="caption">What if Rome never fell? 🏛️ An AI-generated journey through an alternate timeline where the Roman Empire survived.
+
+#alternatehistory #whatif #rome #ai #fyp</textarea>
+                </div>
+                
+                <div class="ai-disclosure">
+                    <span class="icon">🤖</span>
+                    <span class="text">
+                        <strong>AI-Generated Content:</strong> This video is AI-generated and will be labeled accordingly on TikTok.
+                    </span>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-title">
+                    🔒 Privacy Settings
+                </div>
+                <p style="color: #888; font-size: 14px; margin-bottom: 12px;">Who can view this post?</p>
+                
+                <div class="privacy-options">
+                    <label class="privacy-option selected" onclick="selectPrivacy(this)">
+                        <input type="radio" name="privacy" value="public" checked>
+                        <span class="radio-indicator"></span>
+                        <div>
+                            <div style="font-weight: 500;">🌍 Everyone</div>
+                            <div style="font-size: 12px; color: #888;">Anyone on TikTok can view</div>
+                        </div>
+                    </label>
+                    <label class="privacy-option" onclick="selectPrivacy(this)">
+                        <input type="radio" name="privacy" value="friends">
+                        <span class="radio-indicator"></span>
+                        <div>
+                            <div style="font-weight: 500;">👥 Friends Only</div>
+                            <div style="font-size: 12px; color: #888;">Only followers you follow back</div>
+                        </div>
+                    </label>
+                    <label class="privacy-option" onclick="selectPrivacy(this)">
+                        <input type="radio" name="privacy" value="private">
+                        <span class="radio-indicator"></span>
+                        <div>
+                            <div style="font-weight: 500;">🔐 Only Me</div>
+                            <div style="font-size: 12px; color: #888;">Private, only you can view</div>
+                        </div>
+                    </label>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-title">
+                    ⚙️ Interaction Settings
+                </div>
+                <div class="checkbox-group">
+                    <label class="checkbox-item">
+                        <input type="checkbox" checked>
+                        <span>Allow comments</span>
+                    </label>
+                    <label class="checkbox-item">
+                        <input type="checkbox" checked>
+                        <span>Allow Duets</span>
+                    </label>
+                    <label class="checkbox-item">
+                        <input type="checkbox" checked>
+                        <span>Allow Stitch</span>
+                    </label>
+                </div>
+            </div>
+            
+            <button class="btn btn-primary" onclick="startUpload()">
+                🚀 Post to TikTok
+            </button>
+            
+            <div class="policy-notice">
+                By posting, you agree to TikTok's 
+                <a href="https://www.tiktok.com/legal/branded-content-policy">Branded Content Policy</a>
+            </div>
+        </div>
+        
+        <!-- Screen 4: Uploading / Success -->
+        <div class="screen" id="screen4">
+            <div class="card" id="uploadingCard">
+                <div class="card-title">
+                    ⏳ Uploading to TikTok...
+                </div>
+                <div class="upload-progress">
+                    <div class="upload-progress-bar" id="progressBar"></div>
+                </div>
+                <p style="text-align: center; color: #888;">
+                    Please wait while we upload your video...
+                </p>
+            </div>
+            
+            <div class="success-screen" id="successCard" style="display: none;">
+                <div class="success-icon">🎉</div>
+                <div class="success-title">Posted Successfully!</div>
+                <p class="success-message">
+                    Your video has been posted to TikTok with AI content disclosure.
+                </p>
+                <div class="account-info" style="margin-bottom: 20px;">
+                    <div class="avatar">T</div>
+                    <div class="account-details">
+                        <div class="account-name">@timelineb_ai</div>
+                        <div class="account-handle">What if Rome Never Fell?</div>
+                    </div>
+                </div>
+                <button class="btn btn-primary" onclick="window.open('https://tiktok.com/@timelineb_ai', '_blank')">
+                    View on TikTok
+                </button>
+                <button class="btn btn-secondary" onclick="resetDemo()">
+                    Post Another Video
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        let currentScreen = 1;
+        
+        function updateSteps() {
+            for (let i = 1; i <= 4; i++) {
+                const step = document.getElementById('step' + i);
+                step.classList.remove('active', 'completed');
+                if (i < currentScreen) {
+                    step.classList.add('completed');
+                } else if (i === currentScreen) {
+                    step.classList.add('active');
+                }
+            }
+        }
+        
+        function goToScreen(num) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById('screen' + num).classList.add('active');
+            currentScreen = num;
+            updateSteps();
+        }
+        
+        function selectPrivacy(element) {
+            document.querySelectorAll('.privacy-option').forEach(opt => {
+                opt.classList.remove('selected');
+            });
+            element.classList.add('selected');
+        }
+        
+        function startUpload() {
+            goToScreen(4);
+            
+            const progressBar = document.getElementById('progressBar');
+            let progress = 0;
+            
+            const interval = setInterval(() => {
+                progress += Math.random() * 15;
+                if (progress >= 100) {
+                    progress = 100;
+                    clearInterval(interval);
+                    setTimeout(showSuccess, 500);
+                }
+                progressBar.style.width = progress + '%';
+            }, 300);
+        }
+        
+        function showSuccess() {
+            document.getElementById('uploadingCard').style.display = 'none';
+            document.getElementById('successCard').style.display = 'block';
+        }
+        
+        function resetDemo() {
+            document.getElementById('uploadingCard').style.display = 'block';
+            document.getElementById('successCard').style.display = 'none';
+            document.getElementById('progressBar').style.width = '0%';
+            goToScreen(1);
+        }
+    </script>
+</body>
+</html>

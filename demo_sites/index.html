@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Timeline B - AI Alternative History</title>
+    <style>
+        :root {
+            --primary-color: #000000; /* TikTok Black */
+            --accent-color: #fe2c55; /* TikTok Redish-Pink */
+            --secondary-accent: #25f4ee; /* TikTok Cyan */
+            --bg-color: #f8f9fa;
+            --text-color: #333;
+            --section-bg: #ffffff;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+        }
+
+        /* Navigation */
+        nav {
+            background: var(--section-bg);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            padding: 1rem 0;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .container {
+            max-width: 960px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        .nav-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-weight: 700;
+            font-size: 1.5rem;
+            color: var(--primary-color);
+        }
+
+        .nav-links a {
+            text-decoration: none;
+            color: var(--text-color);
+            margin-left: 20px;
+            font-weight: 500;
+        }
+
+        .nav-links a:hover {
+            color: var(--accent-color);
+        }
+
+        /* Hero Section */
+        .hero {
+            text-align: center;
+            padding: 4rem 0;
+            background: linear-gradient(135deg, #fff 0%, #f0f2f5 100%);
+        }
+
+        .hero h1 {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .hero p {
+            font-size: 1.2rem;
+            color: #666;
+            max-width: 600px;
+            margin: 0 auto 2rem;
+        }
+
+        .btn {
+            display: inline-block;
+            background-color: var(--primary-color);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 4px;
+            text-decoration: none;
+            font-weight: bold;
+        }
+
+        /* Sections */
+        section {
+            padding: 3rem 0;
+            border-bottom: 1px solid #eee;
+        }
+
+        h2 {
+            border-left: 4px solid var(--accent-color);
+            padding-left: 10px;
+            margin-bottom: 1.5rem;
+        }
+
+        /* Tech Specs Box */
+        .tech-box {
+            background: #2d3436;
+            color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            font-family: 'Courier New', Courier, monospace;
+            margin-top: 1rem;
+        }
+        
+        .tech-box h3 { color: var(--secondary-accent); margin-top: 0; }
+        .tech-box ul { list-style: none; padding-left: 0; }
+        .tech-box li { margin-bottom: 8px; }
+        .tech-box .highlight { color: var(--accent-color); font-weight: bold; }
+
+        /* Legal Text Boxes */
+        .legal-box {
+            background: var(--section-bg);
+            border: 1px solid #ddd;
+            padding: 20px;
+            height: 300px;
+            overflow-y: scroll;
+            border-radius: 4px;
+            font-size: 0.9rem;
+        }
+
+        footer {
+            background: var(--primary-color);
+            color: white;
+            text-align: center;
+            padding: 2rem 0;
+            margin-top: 2rem;
+        }
+
+        footer a { color: #ccc; text-decoration: none; }
+    </style>
+</head>
+<body>
+
+    <nav>
+        <div class="container nav-content">
+            <div class="logo">Timeline B</div>
+            <div class="nav-links">
+                <a href="#about">About</a>
+                <a href="#compliance">Audit Info</a>
+                <a href="#privacy">Privacy</a>
+                <a href="#terms">Terms</a>
+            </div>
+        </div>
+    </nav>
+
+    <header class="hero">
+        <div class="container">
+            <h1>Automated Alternative History</h1>
+            <p>Timeline B creates and shares educational "What If?" scenarios using AI, automatically formatted and published for the TikTok community.</p>
+            <a href="#contact" class="btn">Contact Support</a>
+        </div>
+    </header>
+
+    <section id="about">
+        <div class="container">
+            <h2>How It Works</h2>
+            <p>Timeline B allows users to generate narrative scenarios based on counter-factual historical events. Our system automates the creation of visuals, audio, and text, assembling them into short-form content.</p>
+            
+            <div style="display: flex; gap: 20px; flex-wrap: wrap; margin-top: 20px;">
+                <div style="flex: 1; min-width: 250px; background: white; padding: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">
+                    <h3>1. Generate</h3>
+                    <p>AI creates alternative history scripts and imagery based on user prompts.</p>
+                </div>
+                <div style="flex: 1; min-width: 250px; background: white; padding: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">
+                    <h3>2. Assemble</h3>
+                    <p>Media is compiled into 9:16 MP4 format suitable for mobile viewing.</p>
+                </div>
+                <div style="flex: 1; min-width: 250px; background: white; padding: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">
+                    <h3>3. Publish</h3>
+                    <p>Content is uploaded directly to your TikTok account with AI disclosures.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="compliance">
+        <div class="container">
+            <h2>Platform Compliance & Technical Data</h2>
+            <p>Timeline B integrates with TikTok's Content Posting API strictly adhering to developer policies. Below is an overview of our integration scope for audit verification.</p>
+
+            <div class="tech-box">
+                <h3>Scopes & Permissions</h3>
+                <ul>
+                    <li><span class="highlight">video.publish</span>: Used to publish videos to the authenticated user's account.</li>
+                    <li><span class="highlight">video.upload</span>: Used to upload the video binary file (MP4).</li>
+                </ul>
+
+                <h3>Publishing Flow</h3>
+                <ol>
+                    <li>Backend generation of images/audio/text.</li>
+                    <li>Assembly into <strong>MP4 (H.264, 9:16 aspect ratio)</strong>.</li>
+                    <li>API Call: <code>/v2/post/publish/video/init/</code></li>
+                    <li><strong>Compliance:</strong> The parameter <code>ai_generated=true</code> is enforced on all uploads to disclose AI nature.</li>
+                    <li>Video upload via returned URL.</li>
+                    <li>Status check via <code>/v2/post/publish/status/fetch/</code>.</li>
+                </ol>
+            </div>
+        </div>
+    </section>
+
+    <section id="privacy">
+        <div class="container">
+           <h1 id="privacy-policy-for-timeline-b">Privacy Policy for Timeline B</h1>
+<p><strong>Last Updated:</strong> 11 Jan 2026</p>
+<h2 id="1-introduction">1. Introduction</h2>
+<p>Welcome to <strong>Timeline B</strong> (&quot;we,&quot; &quot;our,&quot; or &quot;us&quot;). We are committed to protecting your privacy and ensuring you understand exactly how your information is used. This Privacy Policy explains what information we collect, how we use it, and your rights regarding your data when you use our automated video publishing platform.</p>
+<h2 id="2-information-we-collect">2. Information We Collect</h2>
+<p>To provide our AI-generated alternative history services, we collect the following types of information:</p>
+<h3 id="a-information-you-provide">A. Information You Provide</h3>
+<ul>
+<li><strong>Account Information:</strong> When you register, we may collect your email address, username, and password.</li>
+<li><strong>User Inputs:</strong> We collect the text prompts, settings, and historical scenarios you input into Timeline B to generate content.</li>
+</ul>
+<h3 id="b-information-from-third-parties-tiktok-">B. Information from Third Parties (TikTok)</h3>
+<p>When you choose to link your TikTok account to Timeline B, we access certain information via the TikTok API, subject to your explicit permission:</p>
+<ul>
+<li><strong>Profile Information:</strong> Your TikTok username, display name, and avatar image.</li>
+<li><strong>Access Tokens:</strong> Secure tokens required to authenticate and publish videos to your account.</li>
+<li><strong>Publishing Data:</strong> Status updates regarding the upload success/failure of videos generated by our service.</li>
+</ul>
+<h3 id="c-usage-data">C. Usage Data</h3>
+<ul>
+<li><strong>Log Data:</strong> We collect standard log files when you use the app (IP address, browser type, timestamps).</li>
+<li><strong>Device Information:</strong> We may collect information about the device you use to access the service (device model, OS version).</li>
+</ul>
+<h2 id="3-how-we-use-your-information">3. How We Use Your Information</h2>
+<p>We use your data for the specific purposes listed below:</p>
+<ol>
+<li><strong>To Provide the Service:</strong> To log you in, generate the requested alternative history videos, and automate the publishing process to your TikTok account.</li>
+<li><strong>AI Generation:</strong> Your text inputs are processed by our AI algorithms (and potentially third-party AI providers) solely to create the video, audio, and script content you requested.</li>
+<li><strong>Service Improvement:</strong> To analyze usage trends and fix technical bugs.</li>
+<li><strong>Communication:</strong> To send you service-related notices (e.g., &quot;Video Published Successfully&quot; or &quot;Publication Failed&quot;).</li>
+</ol>
+<h2 id="4-how-we-share-your-information">4. How We Share Your Information</h2>
+<p>We do not sell your personal data. We only share information in the following limited circumstances:</p>
+<ul>
+<li><strong>Service Providers:</strong> We may share data with trusted third-party vendors who help us operate our services (e.g., cloud hosting providers like AWS/Google Cloud, or AI model providers). These providers are bound by confidentiality agreements.</li>
+<li><strong>TikTok:</strong> We transmit the final generated video file and necessary metadata to TikTok to fulfill your request to publish content.</li>
+<li><strong>Legal Requirements:</strong> We may disclose information if required by law, regulation, or a valid legal process (e.g., a subpoena).</li>
+</ul>
+<h2 id="5-tiktok-data-specifics-app-audit-compliance-">5. TikTok Data Specifics (App Audit Compliance)</h2>
+<p>In strict adherence to TikTok’s Developer Policy:</p>
+<ul>
+<li><strong>Limited Use:</strong> We use TikTok user data <strong>solely</strong> for the purpose of functionality explicit to the user (generating and publishing videos). We do not use TikTok data for advertising purposes or build user profiles for surveillance.</li>
+<li><strong>No Transfer:</strong> We do not transfer TikTok user data to data brokers or unrelated third parties.</li>
+<li><strong>Refresh/Deletion:</strong> We respect TikTok’s token expiration and user revocation events. If you unlink your TikTok account, we delete the access tokens associated with that account.</li>
+</ul>
+<h2 id="6-data-retention">6. Data Retention</h2>
+<p>We retain your personal information and generated content only for as long as necessary to provide the Service or as required by law.</p>
+<ul>
+<li><strong>User Inputs/Videos:</strong> Are stored for [Number] days to allow for user download/review, after which they are [Archived/Deleted].</li>
+<li><strong>TikTok Tokens:</strong> Are stored encrypted and only while your account is active and authorized.</li>
+</ul>
+<h2 id="7-data-security">7. Data Security</h2>
+<p>We implement industry-standard security measures (including encryption in transit and at rest) to protect your data from unauthorized access, alteration, or destruction. However, no method of transmission over the internet is 100% secure.</p>
+<h2 id="8-your-rights">8. Your Rights</h2>
+<p>Depending on your location, you may have the right to:</p>
+<ul>
+<li><strong>Access</strong> the personal data we hold about you.</li>
+<li><strong>Request Deletion</strong> of your account and data.</li>
+<li><strong>Revoke Permissions:</strong> You can disconnect Timeline B from your TikTok account at any time via the TikTok app settings (&quot;Security and Login&quot; &gt; &quot;Manage App Permissions&quot;).</li>
+</ul>
+<p>To exercise these rights, please contact us at the email below.</p>
+<h2 id="9-changes-to-this-policy">9. Changes to This Policy</h2>
+<p>We may update this Privacy Policy from time to time. We will notify you of any changes by posting the new Privacy Policy on this page and updating the &quot;Last Updated&quot; date.</p>
+<h2 id="10-contact-us">10. Contact Us</h2>
+<p>If you have questions about this Privacy Policy or our data practices, please contact us at:</p>
+<ul>
+<li><strong>Email:</strong> timelineb.official@gmail.com</li>
+</ul>
+
+            </div>
+        </div>
+    </section>
+
+    <section id="terms">
+        <div class="container">
+            <h1 id="terms-of-service-for-timeline-b">Terms of Service for Timeline B</h1>
+<p><strong>Last Updated:</strong> 11 Jan 2026</p>
+<h2 id="1-acceptance-of-terms">1. Acceptance of Terms</h2>
+<p>By accessing, downloading, installing, or using the <strong>Timeline B</strong> application (&quot;App&quot;, &quot;Service&quot;, &quot;We&quot;, &quot;Us&quot;), you agree to be bound by these Terms of Service (&quot;Terms&quot;). If you do not agree to these Terms, you may not use the Service.</p>
+<h2 id="2-description-of-service">2. Description of Service</h2>
+<p>Timeline B is an automated video publishing platform that utilizes Artificial Intelligence (AI) to generate and share &quot;alternative history&quot; content. The Service allows users to generate narrative scenarios, visuals, and audio based on counter-factual historical events and publish them to third-party platforms, specifically TikTok.</p>
+<h2 id="3-nature-of-content-ai-alternative-history-">3. Nature of Content (AI &amp; Alternative History)</h2>
+<p>By using Timeline B, you acknowledge and agree to the following regarding the content generated:</p>
+<ul>
+<li><strong>Fictional Nature:</strong> You understand that all content generated by Timeline B is <strong>fictional</strong> and classified as &quot;Alternative History&quot; or &quot;Speculative Fiction.&quot; It is not intended to represent actual historical facts, real events, or accurate biographies of real persons.</li>
+<li><strong>AI Generation:</strong> Content is generated by artificial intelligence. While we strive for coherence, the AI may occasionally produce content that is nonsensical or factually inconsistent within the context of the scenario.</li>
+<li><strong>No Misinformation:</strong> You agree not to use the Service to generate content intended to mislead, deceive, or spread disinformation about current events, sensitive political topics, or verified historical tragedies (e.g., Holocaust denial) in a way that violates public safety or historical integrity standards.</li>
+</ul>
+<h2 id="4-user-accounts-and-security">4. User Accounts and Security</h2>
+<p>To use certain features, you must register an account. You agree to provide accurate information and keep your login credentials confidential. You are responsible for all activities that occur under your account.</p>
+<h2 id="5-integration-with-tiktok">5. Integration with TikTok</h2>
+<p>Timeline B uses the TikTok API to publish content. By using our Service, you also acknowledge and agree to the following:</p>
+<ul>
+<li><strong>TikTok Terms:</strong> You are bound by <a href="https://www.tiktok.com/legal/terms-of-service">TikTok’s Terms of Service</a> and <a href="https://www.tiktok.com/community-guidelines">TikTok’s Community Guidelines</a>.</li>
+<li><strong>Platform Authority:</strong> Timeline B does not control TikTok. TikTok reserves the right to remove content or ban accounts that violate their policies, even if that content was generated via Timeline B.</li>
+<li><strong>Data Access:</strong> You authorize Timeline B to access your TikTok account information (as permitted by your permissions) solely for the purpose of generating and publishing videos on your behalf.</li>
+</ul>
+<h2 id="6-prohibited-conduct">6. Prohibited Conduct</h2>
+<p>You agree not to use Timeline B to generate or publish content that:</p>
+<ol>
+<li><strong>Hate Speech:</strong> Promotes violence, discrimination, or hatred against individuals or groups based on race, ethnicity, religion, gender, or sexual orientation.</li>
+<li><strong>Explicit Content:</strong> Contains pornography, sexually explicit material, or gratuitous violence.</li>
+<li><strong>Harassment:</strong> Harasses, bullies, or threatens other individuals.</li>
+<li><strong>Illegal Acts:</strong> Promotes illegal acts or violates applicable laws.</li>
+<li><strong>Infringement:</strong> Violates the intellectual property rights of others.</li>
+</ol>
+<p><strong>Strict Note on Alternative History:</strong> We strictly prohibit the generation of scenarios that glorify hateful regimes or tragedies. We reserve the right to ban users who attempt to generate such content.</p>
+<h2 id="7-intellectual-property-rights">7. Intellectual Property Rights</h2>
+<ul>
+<li><strong>Your License to Us:</strong> By generating content, you grant Timeline B a worldwide, non-exclusive, royalty-free license to use, host, store, and display the content for the purpose of operating the Service.</li>
+<li><strong>Ownership:</strong> You retain ownership of the content you generate, subject to the underlying rights of the AI models and third-party assets used.</li>
+<li><strong>Our IP:</strong> The Timeline B software, logo, algorithms, and interface are the exclusive property of Timeline B.</li>
+</ul>
+<h2 id="8-disclaimer-of-warranties">8. Disclaimer of Warranties</h2>
+<p>The Service is provided on an &quot;AS IS&quot; and &quot;AS AVAILABLE&quot; basis. We do not warrant that the AI-generated content will be unique, accurate, or suitable for any specific purpose.</p>
+<h2 id="9-limitation-of-liability">9. Limitation of Liability</h2>
+<p>To the fullest extent permitted by law, Timeline B shall not be liable for any indirect, incidental, special, consequential, or punitive damages, or any loss of profits or revenues, whether incurred directly or indirectly, resulting from:</p>
+<ul>
+<li>Your use or inability to use the Service.</li>
+<li>Any content generated by the AI.</li>
+<li>The removal of your content by TikTok or any third-party platform.</li>
+</ul>
+<h2 id="10-termination">10. Termination</h2>
+<p>We reserve the right to suspend or terminate your access to Timeline B at our sole discretion, without notice, for conduct that we believe violates these Terms or is harmful to other users, us, or third parties (including TikTok).</p>
+<h2 id="11-governing-law">11. Governing Law</h2>
+<p>These Terms shall be governed by and construed in accordance with the laws of Thailand, without regard to its conflict of law principles.</p>
+<h2 id="12-contact-information">12. Contact Information</h2>
+<p>If you have any questions about these Terms, please contact us at:</p>
+<ul>
+<li><strong>Email:</strong> timelineb.official@gmail.com</li>
+</ul>
+            </div>
+        </div>
+    </section>
+
+    <footer id="contact">
+        <div class="container">
+            <p><strong>Timeline B</strong></p>
+            <p>Contact us for support or audit inquiries:</p>
+            <p><a href="mailto:timelineb.official@gmail.com">timelineb.official@gmail.com</a></p>
+            <br>
+            <p>&copy; 2024 Timeline B. All rights reserved.</p>
+        </div>
+    </footer>
+
+</body>
+</html>

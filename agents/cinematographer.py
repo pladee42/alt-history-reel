@@ -138,12 +138,13 @@ class Cinematographer:
         """
         stage = getattr(scenario, f"stage_{keyframe.stage}")
         
-        # Build motion prompt from stage image prompt if not provided
+        # 1. Define Motion/Action
         if not motion_prompt:
-            if hasattr(stage, 'image_prompt') and stage.image_prompt:
-                motion_prompt = stage.image_prompt
-            else:
-                motion_prompt = f"slow gentle motion, atmospheric, {stage.mood}"
+            motion_prompt = f"slow gentle motion, atmospheric, {stage.mood}"
+            
+        # 2. Add Prompt Prefix (User Request: "IMPORTANT: Animates the video based on the image...")
+        if hasattr(stage, 'image_prompt') and stage.image_prompt and stage.image_prompt not in motion_prompt:
+            motion_prompt = f"IMPORTANT: Animates the video based on the image {stage.image_prompt}. {motion_prompt}"
 
         
         # Route to appropriate provider

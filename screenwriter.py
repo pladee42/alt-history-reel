@@ -135,6 +135,43 @@ class Screenwriter:
 Generate a unique scenario with premise, location, and 3 stages.
 Respond with valid JSON."""
     
+    def _find_overused_countries(self, premises: list, threshold: int = 3) -> list:
+        """
+        Analyze existing premises to find countries that appear too frequently.
+        
+        Args:
+            premises: List of existing premise strings
+            threshold: Number of mentions before a country is considered overused
+            
+        Returns:
+            List of overused country names
+        """
+        # Common countries to track
+        countries = [
+            "China", "Russia", "USA", "America", "United States",
+            "North Korea", "Iran", "Japan", "Germany", "UK", "Britain",
+            "France", "India", "Pakistan", "Turkey", "Cuba", "Venezuela",
+            "Australia", "South Korea", "Israel", "Saudi Arabia"
+        ]
+        
+        # Count mentions
+        counts = {}
+        all_text = " ".join(premises).lower()
+        for country in countries:
+            count = all_text.count(country.lower())
+            if count > 0:
+                # Normalize USA/America/United States
+                if country in ["USA", "America", "United States"]:
+                    key = "USA"
+                elif country in ["UK", "Britain"]:
+                    key = "UK"
+                else:
+                    key = country
+                counts[key] = counts.get(key, 0) + count
+        
+        # Return countries that exceed threshold
+        return [c for c, n in counts.items() if n >= threshold]
+    
     def generate_scenario(self, topic_hint: Optional[str] = None, 
                           avoid_premises: Optional[list] = None) -> Scenario:
         """
@@ -158,6 +195,11 @@ Respond with valid JSON."""
             for p in avoid_premises[:15]:  # Limit to 15 to not overwhelm context
                 prompt += f"  - {p}\n"
             prompt += "\nGenerate something COMPLETELY DIFFERENT from the above topics."
+            
+            # Analyze for overused countries and add avoidance instruction
+            overused = self._find_overused_countries(avoid_premises)
+            if overused:
+                prompt += f"\n\n🚫 DIVERSITY REQUIREMENT: The following countries appear too frequently. Use a DIFFERENT country as the aggressor: {', '.join(overused)}"
         
         # Add today's date for context
         today = datetime.now().strftime("%B %d")

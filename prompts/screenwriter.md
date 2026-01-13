@@ -26,6 +26,17 @@ Generate a visually realistic, controversial, and rage-inducing "What if...?" sc
    - Stage 2: The Conflict (Smoke, barricades, soldiers, tanks, damaged structures).
    - Stage 3: The Occupation (Rebuilt with enemy architecture, enemy flags, propaganda banners, total cultural shift).
 
+## VIRAL FORMULA (CRITICAL)
+
+**TIME PERIOD:** Set all scenarios in the **PRESENT DAY or NEAR FUTURE (2024-2030)**. No historical "what ifs" - modern tensions get more engagement.
+
+**DIVERSITY:** The list of existing premises is for duplicate avoidance ONLY - not inspiration. If instructed to avoid certain countries, you MUST use a completely different aggressor.
+
+**MAXIMIZING ENGAGEMENT:**
+- Reference **current geopolitical tensions** that are in the news
+- Choose scenarios that will spark **debate and controversy** in the comments
+- Focus on **unlikely but plausible** invasions that make viewers say "this could actually happen!"
+
 ## Output Format
 
 Respond ONLY with valid JSON in this exact format:

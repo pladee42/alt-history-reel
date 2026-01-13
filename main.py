@@ -190,7 +190,7 @@ def run_phase_4(settings, dry_run: bool = False):
     video_clips = getattr(settings, '_current_video_clips', None)
     audio_clips = getattr(settings, '_current_audio_clips', None)
     
-    if not scenario or not video_clips or not audio_clips:
+    if not scenario or not video_clips:
         print("   ⚠️  Context missing. Attempting to resume from latest findings...")
         from archivist import Archivist
         archivist = Archivist(settings.google_sheet_id)
@@ -225,7 +225,7 @@ def run_phase_4(settings, dry_run: bool = False):
             
             for stage in [1, 2, 3]:
                 # Video
-                v_path = os.path.join(settings.output_dir, f"video_{stage}.mp4")
+                v_path = os.path.join(settings.output_dir, scenario.id, f"video_{stage}.mp4")
                 if os.path.exists(v_path):
                     video_clips.append(VideoClip(stage=stage, path=v_path, duration=5.0))
                 
@@ -237,9 +237,12 @@ def run_phase_4(settings, dry_run: bool = False):
                      mood = stage_data.mood
                      audio_clips.append(AudioClip(stage=stage, path=a_path, duration=5.0, mood=mood))
             
-            if len(video_clips) < 3 or len(audio_clips) < 3:
-                 print("   ❌ Missing some media files for resume. Cannot proceed.")
+            if len(video_clips) < 3:
+                 print("   ❌ Missing some video files for resume. Cannot proceed.")
                  return False
+            
+            if len(audio_clips) < 3:
+                 print("   ⚠️  Missing separate audio files. Assuming embedded audio in videos.")
                  
             print(f"      ✅ Loaded {len(video_clips)} videos and {len(audio_clips)} audios")
             

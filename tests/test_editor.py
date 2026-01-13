@@ -41,8 +41,7 @@ def test_editor(scenario_id: str):
         return
 
     print(f"✅ Loaded Scenario Data: {scenario.title}")
-    # Force override title to test rich text and wrapping
-    scenario.title = "WHAT IF **CHINA** INVADED **AUSTRALIA** ?"
+    print(f"✅ Loaded Scenario Data: {scenario.title}")
 
 
     # 3. Load Video Clips

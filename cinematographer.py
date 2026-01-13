@@ -138,9 +138,13 @@ class Cinematographer:
         """
         stage = getattr(scenario, f"stage_{keyframe.stage}")
         
-        # Build motion prompt from stage mood if not provided
+        # Build motion prompt from stage image prompt if not provided
         if not motion_prompt:
-            motion_prompt = f"slow gentle motion, atmospheric, {stage.mood}"
+            if hasattr(stage, 'image_prompt') and stage.image_prompt:
+                motion_prompt = stage.image_prompt
+            else:
+                motion_prompt = f"slow gentle motion, atmospheric, {stage.mood}"
+
         
         # Route to appropriate provider
         if self.use_kie:

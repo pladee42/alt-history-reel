@@ -334,6 +334,37 @@ class Editor:
             
         return TextClip(**text_clip_args).with_position(position).with_duration(duration)
 
+    def _resize_to_fill(self, clip, width=1080, height=1920):
+        """
+        Resizes and center-crops clip to fill target dimensions (Aspect Fill).
+        """
+        w, h = clip.size
+        if w == width and h == height:
+            return clip
+            
+        target_ratio = width / height
+        clip_ratio = w / h
+        
+        # Calculate scale factor to cover the area
+        if clip_ratio > target_ratio:
+            # Clip is wider (landscape-ish) -> Scale by Height
+            scale = height / h
+        else:
+            # Clip is taller/narrower -> Scale by Width
+            scale = width / w
+            
+        # Resize first
+        # Note: using resized() which is safe for v2, fallback logic if needed
+        try:
+            resized = clip.resized(scale)
+        except AttributeError:
+            # Fallback for older moviepy
+            resized = clip.resize(scale)
+            
+        # Center Crop
+        return resized.cropped(width=width, height=height, x_center=resized.w / 2, y_center=resized.h / 2)
+
+
     def assemble_final_cut(self, scenario: Scenario, video_clips: List[VideoClip], 
                           audio_clips: List[AudioClip]) -> str:
         """
@@ -364,7 +395,9 @@ class Editor:
         for stage_num in [1, 2, 3]:
             v_data = next((v for v in video_clips if v.stage == stage_num), None)
             a_data = next((a for a in audio_clips if a.stage == stage_num), None)
-            if v_data and a_data:
+            
+            # Allow proceeding if we have video, even if audio is missing (embedded audio)
+            if v_data:
                 ordered_clips.append((stage_num, v_data, a_data))
         
         # Ranking overlay config (shared)
@@ -380,21 +413,29 @@ class Editor:
         for stage_num, v_data, a_data in ordered_clips:
             print(f"      Loading Stage {stage_num}...")
             video = VideoFileClip(v_data.path)
-            audio = AudioFileClip(a_data.path)
-            target_duration = max(video.duration, audio.duration)
             
-            # Handle Video (Loop if too short)
-            if video.duration < target_duration:
-                loop_count = int(target_duration // video.duration) + 1
-                video = concatenate_videoclips([video] * loop_count)
-            video = video.subclipped(0, target_duration)
-            
-            # Handle Audio (Loop if too short)
-            if audio.duration < target_duration:
-                audio = AudioLoop(duration=target_duration).apply(audio)
-            audio = audio.subclipped(0, target_duration)
-            
-            video = video.with_audio(audio)
+            if a_data:
+                # External Audio
+                audio = AudioFileClip(a_data.path)
+                target_duration = max(video.duration, audio.duration)
+                
+                # Handle Audio (Loop if too short)
+                if audio.duration < target_duration:
+                    audio = AudioLoop(duration=target_duration).apply(audio)
+                audio = audio.subclipped(0, target_duration)
+                
+                # Handle Video (Loop if too short)
+                if video.duration < target_duration:
+                    loop_count = int(target_duration // video.duration) + 1
+                    video = concatenate_videoclips([video] * loop_count)
+                video = video.subclipped(0, target_duration)
+                
+                video = video.with_audio(audio)
+            else:
+                # Embedded Audio
+                target_duration = video.duration
+                print(f"      🎵 Using embedded audio for Stage {stage_num}")
+                
             loaded_clips[stage_num] = (video, target_duration)
         
         # 3. Create TEASER clip (reusing Phase 3 video - no double loading!)
@@ -404,7 +445,7 @@ class Editor:
             
             # Extract first N seconds for teaser (subclip reuses existing video in memory)
             teaser_video = stage3_video.subclipped(0, min(teaser_duration, stage3_video.duration))
-            teaser_cropped = teaser_video.cropped(y1=0, y2=1920).with_position((0, 0))
+            teaser_cropped = self._resize_to_fill(teaser_video, 1080, 1920).with_position((0, 0))
             
             # Create ALL rankings visible for teaser
             teaser_ranking_clips = []
@@ -440,9 +481,8 @@ class Editor:
             print(f"      Compositing Stage {stage_num}...")
             video, target_duration = loaded_clips[stage_num]
             
-            # CROP & POSITION VIDEO (Full height - no header bar)
-            # Crop source video to 9:16 aspect ratio (1080x1920)
-            video_cropped = video.cropped(y1=0, y2=1920)
+            # CROP & POSITION VIDEO (Aspect Fill - dynamic resize)
+            video_cropped = self._resize_to_fill(video, 1080, 1920)
             video_positioned = video_cropped.with_position((0, 0))
 
             # RANKING OVERLAY (progressive reveal)

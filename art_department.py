@@ -193,12 +193,13 @@ Reply PASS if consistent, FAIL if not."""
         """
         # Route to appropriate provider
         if self.use_kie:
-            return self._generate_with_kie(prompt, stage_num, scenario_id, reference_image_path)
+            # Kie.ai uses URLs for image editing (not local paths)
+            return self._generate_with_kie(prompt, stage_num, scenario_id, reference_image_url)
         else:
             return self._generate_with_fal(prompt, stage_num, scenario_id, reference_image_url)
     
     def _generate_with_kie(self, prompt: str, stage_num: int, scenario_id: str,
-                           reference_image_path: str = None) -> Tuple[str, str]:
+                           reference_image_url: str = None) -> Tuple[str, str]:
         """
         Generate image using Kie.ai nano-banana-pro.
         
@@ -206,22 +207,22 @@ Reply PASS if consistent, FAIL if not."""
             prompt: The image prompt
             stage_num: Stage number for filename
             scenario_id: Scenario ID for folder organization
-            reference_image_path: Optional path to reference image for editing
+            reference_image_url: Optional URL to reference image for editing
             
         Returns:
             Tuple of (path to saved image, image URL)
         """
-        print(f"   🖼️ Generating keyframe {stage_num} via Kie.ai{'(edit)' if reference_image_path else ''}...")
+        print(f"   🖼️ Generating keyframe {stage_num} via Kie.ai{'(edit)' if reference_image_url else ''}...")
         
         # Create scenario folder
         scenario_dir = self.output_dir / scenario_id
         scenario_dir.mkdir(exist_ok=True)
         
-        if reference_image_path:
+        if reference_image_url:
             # Image-to-image editing for stages 2-3
             result = self.kie_client.edit_image(
                 prompt=prompt,
-                reference_image_path=reference_image_path,
+                reference_image_url=reference_image_url,
                 aspect_ratio=self.kie_aspect_ratio
             )
         else:
@@ -245,7 +246,7 @@ Reply PASS if consistent, FAIL if not."""
             cost_tracker.log_kie_call(
                 model="nano-banana-pro",
                 scenario_id=scenario_id,
-                operation="text_to_image" if not reference_image_path else "image_to_image",
+                operation="text_to_image" if not reference_image_url else "image_to_image",
                 metadata={"stage": stage_num}
             )
         except (ImportError, AttributeError):

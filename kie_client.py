@@ -99,7 +99,14 @@ class KieClient:
         response.raise_for_status()
         
         result = response.json()
-        task_id = result.get("task_id") or result.get("taskId")
+        
+        # Handle nested response: {'code': 200, 'data': {'taskId': ...}}
+        # Note: data can be None explicitly, so check for that
+        data = result.get("data")
+        if data is None:
+            data = result  # Fall back to result if data is None or missing
+        
+        task_id = data.get("taskId") or data.get("task_id") or result.get("taskId") or result.get("task_id")
         
         if not task_id:
             raise ValueError(f"No task_id in response: {result}")
@@ -114,16 +121,23 @@ class KieClient:
             task_id: Task ID from create_task
             
         Returns:
-            Task status and output if completed
+            Task status and output if completed (normalized from 'data' wrapper)
         """
         response = requests.get(
-            f"{self.BASE_URL}/jobs/queryTask",
+            f"{self.BASE_URL}/jobs/recordInfo",  # Correct endpoint
             headers=self.headers,
-            params={"task_id": task_id},
+            params={"taskId": task_id},  # Correct parameter name
             timeout=30
         )
         response.raise_for_status()
-        return response.json()
+        result = response.json()
+        
+        # Handle nested response: {'code': 200, 'data': {'status': ..., 'output': ...}}
+        # Note: data can be None explicitly, so check for that
+        data = result.get("data")
+        if data is None:
+            data = result  # Fall back to result if data is None or missing
+        return data
     
     def wait_for_completion(
         self, 
@@ -146,16 +160,18 @@ class KieClient:
         
         while time.time() - start_time < timeout:
             result = self.query_task(task_id)
-            status = result.get("status", "").lower()
+            
+            # Kie.ai uses 'state' field, but check 'status' as fallback
+            status = (result.get("state") or result.get("status") or "").lower()
             
             if status in ["completed", "success", "done"]:
                 return result
             
-            if status in ["failed", "error"]:
-                error_msg = result.get("error") or result.get("message") or "Unknown error"
+            if status in ["failed", "error", "fail"]:
+                error_msg = result.get("error") or result.get("message") or result.get("failMsg") or "Unknown error"
                 raise RuntimeError(f"Task {task_id} failed: {error_msg}")
             
-            # Still processing
+            # Still processing (generating, pending, etc.)
             time.sleep(poll_interval)
         
         raise TimeoutError(f"Task {task_id} timed out after {timeout}s")
@@ -197,6 +213,49 @@ class KieClient:
     # High-Level Image Methods
     # =========================================================================
     
+    def _extract_result_url(self, result: Dict[str, Any], url_type: str = "image") -> str:
+        """
+        Extract URL from Kie.ai result response.
+        
+        Kie.ai returns URLs in 'resultJson' as a JSON string:
+        {'resultJson': '{"resultUrls":["https://..."]}'}
+        
+        Args:
+            result: Result dict from wait_for_completion
+            url_type: "image" or "video" for error messages
+            
+        Returns:
+            Extracted URL string
+        """
+        import json
+        
+        # Try resultJson first (most common)
+        result_json_str = result.get("resultJson")
+        if result_json_str:
+            try:
+                result_json = json.loads(result_json_str)
+                urls = result_json.get("resultUrls") or result_json.get("resultImageUrl") or []
+                if urls:
+                    return urls[0] if isinstance(urls, list) else urls
+                # Also check for video URLs
+                video_url = result_json.get("resultVideoUrl") or result_json.get("videoUrl")
+                if video_url:
+                    return video_url
+            except json.JSONDecodeError:
+                pass
+        
+        # Fallback: try direct output field
+        output = result.get("output", {})
+        if isinstance(output, dict):
+            url = output.get("image_url") or output.get("url") or output.get("video_url")
+            if url:
+                return url
+            images = output.get("images") or output.get("image_urls") or []
+            if images:
+                return images[0] if isinstance(images[0], str) else images[0].get("url")
+        
+        raise ValueError(f"No {url_type} URL in response: {result}")
+    
     def generate_image(
         self, 
         prompt: str, 
@@ -224,18 +283,7 @@ class KieClient:
         })
         
         result = self.wait_for_completion(task_id)
-        
-        # Extract image URL from response
-        output = result.get("output", {})
-        images = output.get("images") or output.get("image_urls") or []
-        
-        if not images:
-            # Try alternative response structure
-            image_url = output.get("image_url") or output.get("url")
-            if not image_url:
-                raise ValueError(f"No image URL in response: {result}")
-        else:
-            image_url = images[0] if isinstance(images[0], str) else images[0].get("url")
+        image_url = self._extract_result_url(result, "image")
         
         print(f"      ✅ Image generated")
         
@@ -244,7 +292,7 @@ class KieClient:
     def edit_image(
         self, 
         prompt: str, 
-        reference_image_path: str,
+        reference_image_url: str,
         aspect_ratio: str = "9:16",
         resolution: str = "1K"
     ) -> KieImageResult:
@@ -253,7 +301,7 @@ class KieClient:
         
         Args:
             prompt: Edit instructions
-            reference_image_path: Path to the reference image
+            reference_image_url: URL to the reference image (NOT base64)
             aspect_ratio: Output aspect ratio
             resolution: Output resolution
             
@@ -262,29 +310,17 @@ class KieClient:
         """
         print(f"   🖼️ Kie.ai: Editing image (nano-banana-pro)...")
         
-        # Encode reference image
-        image_data = self._encode_image_base64(reference_image_path)
-        
+        # Kie.ai expects image URLs, not base64 encoded data
         task_id = self.create_task("nano-banana-pro", {
             "prompt": prompt,
-            "image_urls": [image_data],  # nano-banana-pro uses image_urls for editing
+            "image_urls": [reference_image_url],  # Must be a URL
             "aspect_ratio": aspect_ratio,
             "resolution": resolution,
             "num_images": 1
         })
         
         result = self.wait_for_completion(task_id)
-        
-        # Extract image URL from response
-        output = result.get("output", {})
-        images = output.get("images") or output.get("image_urls") or []
-        
-        if not images:
-            image_url = output.get("image_url") or output.get("url")
-            if not image_url:
-                raise ValueError(f"No image URL in response: {result}")
-        else:
-            image_url = images[0] if isinstance(images[0], str) else images[0].get("url")
+        image_url = self._extract_result_url(result, "image")
         
         print(f"      ✅ Image edited")
         
@@ -333,18 +369,7 @@ class KieClient:
         
         # Video generation takes longer
         result = self.wait_for_completion(task_id, timeout=600, poll_interval=5)
-        
-        # Extract video URL from response
-        output = result.get("output", {})
-        video_url = output.get("video_url") or output.get("url")
-        
-        if not video_url:
-            # Try alternative structures
-            video = output.get("video", {})
-            video_url = video.get("url") if isinstance(video, dict) else video
-        
-        if not video_url:
-            raise ValueError(f"No video URL in response: {result}")
+        video_url = self._extract_result_url(result, "video")
         
         print(f"      ✅ Video generated" + (" (with audio)" if generate_audio else ""))
         

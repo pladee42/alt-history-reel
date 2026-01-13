@@ -1,7 +1,9 @@
 """
 cinematographer.py - Video Generation
 
-Animates static keyframes into video clips using Fal.ai image-to-video models.
+Animates static keyframes into video clips using Fal.ai or Kie.ai (Seedance).
+Supports provider selection via model_config.yaml.
+Seedance 1.5 Pro can generate video with native audio.
 """
 
 import os
@@ -17,6 +19,13 @@ from dotenv import load_dotenv
 
 from screenwriter import Scenario
 from art_department import Keyframe
+
+# Import Kie.ai client if available
+try:
+    from kie_client import KieClient
+    KIE_AVAILABLE = True
+except ImportError:
+    KIE_AVAILABLE = False
 
 # Load environment variables
 load_dotenv(override=True)
@@ -40,10 +49,11 @@ class VideoClip:
     stage: int
     path: str
     duration: float
+    has_audio: bool = False  # True if Seedance generated native audio
 
 
 class Cinematographer:
-    """Generates video clips from keyframes using Fal.ai."""
+    """Generates video clips from keyframes using Fal.ai or Kie.ai (Seedance)."""
     
     def __init__(self, output_dir: str):
         """
@@ -57,19 +67,47 @@ class Cinematographer:
         
         # Load model configuration
         self.config = load_model_config()
-        video_config = self.config.get("fal_video", {})
         
-        # Get model name from config
-        self.video_model = video_config.get("model", "fal-ai/minimax/hailuo-2.3/pro/image-to-video")
-        self.video_duration = video_config.get("duration", 5.0)
+        # Check if Kie.ai is enabled
+        kie_config = self.config.get("kie", {})
+        self.use_kie = kie_config.get("enabled", False) and KIE_AVAILABLE
         
-        # Verify FAL_KEY exists
-        fal_key = os.getenv("FAL_KEY")
-        if not fal_key:
-            raise ValueError("FAL_KEY not found in environment")
+        if self.use_kie:
+            # Initialize Kie.ai client for Seedance
+            kie_key = os.getenv("KIE_AI_KEY")
+            if not kie_key:
+                print("   ⚠️ KIE_AI_KEY not found, falling back to Fal.ai")
+                self.use_kie = False
+            else:
+                self.kie_client = KieClient()
+                kie_video_config = self.config.get("kie_video", {})
+                self.kie_model = kie_video_config.get("model", "bytedance/seedance-1.5-pro")
+                self.kie_duration = kie_video_config.get("duration", 5)
+                self.kie_resolution = kie_video_config.get("resolution", "720p")
+                self.kie_aspect_ratio = kie_video_config.get("aspect_ratio", "9:16")
+                self.generate_audio = kie_video_config.get("generate_audio", True)
+        
+        # Fal.ai config (fallback or primary)
+        if not self.use_kie:
+            video_config = self.config.get("fal_video", {})
+            self.video_model = video_config.get("model", "fal-ai/minimax/hailuo-2.3/pro/image-to-video")
+            self.video_duration = video_config.get("duration", 5.0)
+            
+            # Verify FAL_KEY exists
+            fal_key = os.getenv("FAL_KEY")
+            if not fal_key:
+                raise ValueError("FAL_KEY not found in environment")
+        
+        # Determine provider for display
+        if self.use_kie:
+            provider = f"Kie.ai ({self.kie_model})"
+            audio_note = " + audio" if self.generate_audio else ""
+        else:
+            provider = f"Fal.ai ({self.video_model})"
+            audio_note = ""
         
         print(f"🎬 Cinematographer initialized")
-        print(f"   Model: {self.video_model}")
+        print(f"   Provider: {provider}{audio_note}")
         print(f"   Output: {self.output_dir}")
     
     def _upload_image_to_fal(self, image_path: str) -> str:
@@ -104,6 +142,83 @@ class Cinematographer:
         if not motion_prompt:
             motion_prompt = f"slow gentle motion, atmospheric, {stage.mood}"
         
+        # Route to appropriate provider
+        if self.use_kie:
+            return self._animate_with_kie(keyframe, motion_prompt)
+        else:
+            return self._animate_with_fal(keyframe, motion_prompt)
+    
+    def _animate_with_kie(self, keyframe: Keyframe, motion_prompt: str) -> VideoClip:
+        """
+        Animate keyframe using Kie.ai Seedance 1.5 Pro.
+        
+        Args:
+            keyframe: The keyframe to animate
+            motion_prompt: Motion/action description
+            
+        Returns:
+            VideoClip with path and audio info
+        """
+        print(f"   🎥 Animating keyframe {keyframe.stage} via Kie.ai Seedance...")
+        
+        try:
+            result = self.kie_client.generate_video(
+                prompt=motion_prompt,
+                image_path=keyframe.path,
+                duration=self.kie_duration,
+                resolution=self.kie_resolution,
+                aspect_ratio=self.kie_aspect_ratio,
+                generate_audio=self.generate_audio
+            )
+            
+            # Download and save the video
+            video_path = Path(keyframe.path).parent / f"video_{keyframe.stage}.mp4"
+            
+            response = requests.get(result.video_url)
+            with open(video_path, 'wb') as f:
+                f.write(response.content)
+            
+            # Log cost
+            try:
+                from cost_tracker import cost_tracker
+                scenario_id = video_path.parent.name
+                cost_tracker.log_kie_call(
+                    model="bytedance/seedance-1.5-pro",
+                    scenario_id=scenario_id,
+                    operation="image_to_video",
+                    metadata={
+                        "duration_seconds": self.kie_duration,
+                        "has_audio": self.generate_audio
+                    }
+                )
+            except (ImportError, AttributeError):
+                pass
+            
+            audio_note = " (with audio)" if self.generate_audio else ""
+            print(f"      ✅ Saved: {video_path.name}{audio_note}")
+            
+            return VideoClip(
+                stage=keyframe.stage,
+                path=str(video_path),
+                duration=float(self.kie_duration),
+                has_audio=self.generate_audio
+            )
+            
+        except Exception as e:
+            print(f"      ❌ Error: {e}")
+            raise
+    
+    def _animate_with_fal(self, keyframe: Keyframe, motion_prompt: str) -> VideoClip:
+        """
+        Animate keyframe using Fal.ai.
+        
+        Args:
+            keyframe: The keyframe to animate
+            motion_prompt: Motion/action description
+            
+        Returns:
+            VideoClip with path
+        """
         print(f"   🎥 Animating keyframe {keyframe.stage}...")
         
         # Upload the keyframe image to get a URL
@@ -150,7 +265,8 @@ class Cinematographer:
             return VideoClip(
                 stage=keyframe.stage,
                 path=str(video_path),
-                duration=self.video_duration
+                duration=self.video_duration,
+                has_audio=False
             )
             
         except Exception as e:

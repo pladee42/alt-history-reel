@@ -144,26 +144,37 @@ class Cinematographer:
         
         # Route to appropriate provider
         if self.use_kie:
-            return self._animate_with_kie(keyframe, motion_prompt)
+            # Extract audio prompt if generating audio
+            audio_prompt = ""
+            if self.generate_audio and hasattr(stage, 'audio_prompt'):
+                audio_prompt = stage.audio_prompt
+            return self._animate_with_kie(keyframe, motion_prompt, audio_prompt)
         else:
             return self._animate_with_fal(keyframe, motion_prompt)
     
-    def _animate_with_kie(self, keyframe: Keyframe, motion_prompt: str) -> VideoClip:
+    def _animate_with_kie(self, keyframe: Keyframe, motion_prompt: str, audio_prompt: str = "") -> VideoClip:
         """
         Animate keyframe using Kie.ai Seedance 1.5 Pro.
         
         Args:
             keyframe: The keyframe to animate
             motion_prompt: Motion/action description
+            audio_prompt: Optional audio description for native audio generation
             
         Returns:
             VideoClip with path and audio info
         """
         print(f"   🎥 Animating keyframe {keyframe.stage} via Kie.ai Seedance...")
         
+        # Combine prompts for Seedance if audio is enabled
+        final_prompt = motion_prompt
+        if self.generate_audio and audio_prompt:
+            final_prompt = f"{motion_prompt}. Audio: {audio_prompt}"
+            print(f"      🎵 Including audio prompt: {audio_prompt[:50]}...")
+        
         try:
             result = self.kie_client.generate_video(
-                prompt=motion_prompt,
+                prompt=final_prompt,
                 image_path=keyframe.path,
                 duration=self.kie_duration,
                 resolution=self.kie_resolution,

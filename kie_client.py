@@ -360,8 +360,8 @@ class KieClient:
         
         task_id = self.create_task("bytedance/seedance-1.5-pro", {
             "prompt": prompt,
-            "image_url": image_data,
-            "duration": duration,
+            "image": image_data,  # Seedance uses "image" not "image_url"
+            "duration": str(duration),  # Kie.ai expects duration as string
             "resolution": resolution,
             "aspect_ratio": aspect_ratio,
             "generate_audio": generate_audio

@@ -54,7 +54,7 @@ We are building an **autonomous artist** that creates 15-second vertical videos 
 │  │ (Flux imgs)  │  │ (Gemini)     │  │(Fal.ai video)│  │     ││ │
 │  └──────────────┘  └──────────────┘  └──────────────┘  └──┬──┘│ │
 │                         Sound Engineer ─────────────────▶ │    │ │
-│                         (ElevenLabs SFX via Fal.ai)       │    │ │
+│                         (Fal.ai / Kie.ai)                 │    │ │
 └───────────────────────────────────────────────────────────┼────┘ │
                                                             ▼      │
 ┌───────────────────────────────────────────────────────────────┐  │
@@ -118,55 +118,60 @@ image_retries: 3
 
 ## 5. Module Breakdown
 
-### `manager.py` (Config Loader)
+### `helpers/manager.py` (Config Loader)
 - Parse CLI `--config` and `--style` arguments
 - Load style/tone YAML file
 - Expose `settings` object to all modules
 
-### `screenwriter.py` (The Creative)
+### `agents/screenwriter.py` (The Creative)
 - **Input:** Today's date, style config
 - **Process:** Gemini Pro generates unique "What if?" scenarios
 - **Output:** Scenario with `title` (using `**emphasis**` syntax), premise, location, 3 stages
 - **Prompt:** `prompts/screenwriter.md`
 
-### `prompt_improver.py` (Quality Enhancement) ✨ NEW
+### `agents/prompt_improver.py` (Quality Enhancement) ✨ NEW
 - **Input:** Raw scenario from Screenwriter
 - **Process:** Two-step refinement:
   1. Generate `image_prompt` from description
   2. Generate `audio_prompt` from image_prompt (chained)
 - **Prompts:** `prompts/improver_image_user.md`, `prompts/improver_audio_user.md`
 - **Output:** Updates scenario with refined prompts
-
-### `archivist.py` (Sheets Manager)
-- **Check:** Query Sheets for duplicate premises
-- **Write:** Store new scenarios with status = "PENDING"
-- **Read:** Fetch pending scenarios for production pipeline
-- **Update:** Methods for status, image_prompt, audio_prompt columns
-
-### `art_department.py` (Image Generation)
+ 
+### `agents/art_department.py` (Image Generation)
 - **Input:** Read scenario from Sheets
 - **Process:** Generate 3 keyframes with Flux (applying style suffix)
 - **Vision Gate:** Gemini verifies consistency (max 3 retries)
 - **Prompt:** `prompts/vision_gate.md`
 - **Output:** Update Sheets status = "IMAGES_DONE"
 
-### `cinematographer.py` (Video Animation)
-- Image-to-Video using Fal.ai (MiniMax Hailuo)
+### `agents/cinematographer.py` (Video Animation)
+- Image-to-Video using Fal.ai (MiniMax Hailuo) or Kie.ai (Seedance 1.5 Pro)
 - Model configurable in `configs/model_config.yaml`
 - Apply video_prompt from style config
 
-### `sound_engineer.py` (Audio)
-- Fal.ai ElevenLabs SFX based on refined `audio_prompt`
+### `agents/sound_engineer.py` (Audio)
+- Fal.ai ElevenLabs SFX or Kie.ai native audio
 - Combines mood + description for richer prompts
 - Configurable `prompt_influence` setting
 
-### `editor.py` (Assembly)
+### `utils/kie_client.py` (Kie.ai Client)
+- Unified interface for Kie.ai API
+- Supports Text-to-Image, Image-to-Image, and Image-to-Video
+- Handles task creation and polling
+
+### `utils/archivist.py` (Sheets Manager)
+- **Check:** Query Sheets for duplicate premises
+- **Write:** Store new scenarios with status = "PENDING"
+- **Read:** Fetch pending scenarios for production pipeline
+- **Update:** Methods for status, image_prompt, audio_prompt columns
+
+### `utils/editor.py` (Assembly)
 - **MoviePy:** Stitch clips + audio + text overlays
 - **Header:** Black background with rich text title (Cyan emphasis)
 - **Ranking Overlay:** Progressive reveal of stages with labels
 - **Layout:** Vertical 9:16 format optimized for Reels/TikTok
 
-### `distributor.py` (Delivery)
+### `utils/distributor.py` (Delivery)
 - Upload to Google Cloud Storage (GCS)
 - Returns public URL for mobile viewing
 - Update Sheets: status = "COMPLETED", video_url = link
@@ -215,9 +220,9 @@ image_retries: 3
 |-----------|------------|
 | Orchestration | `google-generativeai` (Gemini Pro) |
 | Database | `gspread` (Google Sheets) |
-| Image Gen | Fal.ai (Flux) |
-| Video Gen | Fal.ai (MiniMax Hailuo) |
-| Audio | Fal.ai (ElevenLabs SFX) |
+| Image Gen | Fal.ai (Flux) or Kie.ai |
+| Video Gen | Fal.ai (MiniMax Hailuo) or Kie.ai (Seedance) |
+| Audio | Fal.ai (ElevenLabs SFX) or Kie.ai (Native) |
 | Assembly | MoviePy |
 | Storage | Google Cloud Storage (GCS) |
 | Deployment | Cloud Run + Cloud Scheduler |

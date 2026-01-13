@@ -20,16 +20,16 @@ from moviepy import (
 from moviepy.audio.fx import AudioLoop
 from dotenv import load_dotenv
 
-from screenwriter import Scenario
-from cinematographer import VideoClip
-from sound_engineer import AudioClip
-from manager import Settings
+from agents.screenwriter import Scenario
+from agents.cinematographer import VideoClip
+from agents.sound_engineer import AudioClip
+from helpers.manager import Settings
 
 # Load environment variables
 load_dotenv(override=True)
 
 # Get project root directory
-PROJECT_ROOT = Path(__file__).parent
+PROJECT_ROOT = Path(__file__).parent.parent
 
 
 def load_model_config() -> dict:

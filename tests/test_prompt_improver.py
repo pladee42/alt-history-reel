@@ -7,8 +7,8 @@ from dataclasses import dataclass
 
 sys.path.append(str(Path(__file__).parent.parent))
 
-from prompt_improver import PromptImprover
-from screenwriter import Scenario, StageData
+from agents.prompt_improver import PromptImprover
+from agents.screenwriter import Scenario, StageData
 
 @dataclass
 class MockStyle:
@@ -34,8 +34,8 @@ class TestPromptImprover(unittest.TestCase):
             stage_3=StageData(year="2026", label="Stage 3", description="Desc 3", mood="Mood 3"),
         )
 
-    @patch('prompt_improver.genai')
-    @patch('prompt_improver.os.getenv')
+    @patch('agents.prompt_improver.genai')
+    @patch('agents.prompt_improver.os.getenv')
     def test_improve_scenario(self, mock_getenv, mock_genai):
         mock_getenv.return_value = "fake_key"
         

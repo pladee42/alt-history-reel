@@ -14,7 +14,7 @@ from typing import Dict, Optional
 import yaml
 from pathlib import Path
 
-PROJECT_ROOT = Path(__file__).parent
+PROJECT_ROOT = Path(__file__).parent.parent
 
 
 def load_prompt(name: str) -> str:

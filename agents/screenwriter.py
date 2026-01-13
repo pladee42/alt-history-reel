@@ -11,7 +11,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional
 from dataclasses import dataclass, field, asdict
-from manager import load_prompt
+from helpers.manager import load_prompt
 
 import yaml
 from google import genai
@@ -22,7 +22,7 @@ load_dotenv(override=True)
 
 
 # Get project root directory
-PROJECT_ROOT = Path(__file__).parent
+PROJECT_ROOT = Path(__file__).parent.parent
 
 
 

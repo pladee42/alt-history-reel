@@ -16,13 +16,13 @@ import fal_client
 import requests
 from dotenv import load_dotenv
 
-from screenwriter import Scenario
+from agents.screenwriter import Scenario
 
 # Load environment variables
 load_dotenv(override=True)
 
 # Get project root directory
-PROJECT_ROOT = Path(__file__).parent
+PROJECT_ROOT = Path(__file__).parent.parent
 
 
 def load_model_config() -> dict:
@@ -171,7 +171,7 @@ class SoundEngineer:
             
             # Log cost
             try:
-                from cost_tracker import cost_tracker
+                from utils.cost_tracker import cost_tracker
                 cost_tracker.log_fal_call(
                     model=self.audio_model,
                     scenario_id=scenario_id,

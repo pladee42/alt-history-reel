@@ -18,6 +18,7 @@ pip install -r requirements.txt
 # Set up environment
 cp .env.example .env
 # Edit .env with your API keys
+# Make sure to set KIE_AI_KEY if using Kie.ai models
 
 # Run full pipeline
 python main.py --config configs/realistic.yaml
@@ -45,6 +46,7 @@ python main.py --phase 4
 |---------|---------------------|
 | Google AI (Gemini) | `GOOGLE_API_KEY` |
 | Fal.ai | `FAL_KEY` |
+| Kie.ai | `KIE_AI_KEY` |
 | Google Sheets/Drive | `GOOGLE_APPLICATION_CREDENTIALS` |
 
 ## Project Structure
@@ -54,13 +56,21 @@ python main.py --phase 4
 ├── prompts/           # AI prompt templates
 ├── output/            # Generated media
 ├── tests/             # Test scripts
-├── main.py            # Entry point
-├── screenwriter.py    # Scenario generation
-├── art_department.py  # Image generation
-├── cinematographer.py # Video animation
-├── sound_engineer.py  # Audio generation
-├── editor.py          # Video assembly
-└── distributor.py     # Upload to cloud
+├── main.py              # Entry point
+├── agents/
+│   ├── screenwriter.py    # Scenario generation
+│   ├── art_department.py  # Image generation
+│   ├── cinematographer.py # Video animation
+│   ├── sound_engineer.py  # Audio generation
+│   └── prompt_improver.py # Prompt refinement
+├── helpers/
+│   └── manager.py         # Config Loader
+└── utils/
+    ├── archivist.py       # Sheets Manager
+    ├── cost_tracker.py    # Cost estimation
+    ├── kie_client.py      # Kie.ai Client
+    ├── editor.py          # Video assembly
+    └── distributor.py     # Upload to cloud
 ```
 
 ## Documentation

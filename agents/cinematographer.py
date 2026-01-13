@@ -17,12 +17,12 @@ import fal_client
 import requests
 from dotenv import load_dotenv
 
-from screenwriter import Scenario
-from art_department import Keyframe
+from agents.screenwriter import Scenario
+from agents.art_department import Keyframe
 
 # Import Kie.ai client if available
 try:
-    from kie_client import KieClient
+    from utils.kie_client import KieClient
     KIE_AVAILABLE = True
 except ImportError:
     KIE_AVAILABLE = False
@@ -31,7 +31,7 @@ except ImportError:
 load_dotenv(override=True)
 
 # Get project root directory
-PROJECT_ROOT = Path(__file__).parent
+PROJECT_ROOT = Path(__file__).parent.parent
 
 
 def load_model_config() -> dict:
@@ -198,7 +198,7 @@ class Cinematographer:
             
             # Log cost
             try:
-                from cost_tracker import cost_tracker
+                from utils.cost_tracker import cost_tracker
                 scenario_id = video_path.parent.name
                 cost_tracker.log_kie_call(
                     model="bytedance/seedance-1.5-pro",
@@ -271,7 +271,7 @@ class Cinematographer:
             
             # Log cost
             try:
-                from cost_tracker import log_video_generation
+                from utils.cost_tracker import log_video_generation
                 # Extract scenario_id from path (e.g., "output/scenario_xxx/video_1.mp4")
                 scenario_id = video_path.parent.name
                 log_video_generation(self.video_model, scenario_id, self.video_duration)

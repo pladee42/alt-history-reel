@@ -8,11 +8,11 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).parent.parent
 sys.path.append(str(PROJECT_ROOT))
 
-from manager import init_settings, get_settings
-from archivist import Archivist
-from sound_engineer import generate_audio
-from cinematographer import VideoClip
-from editor import Editor
+from helpers.manager import init_settings, get_settings
+from utils.archivist import Archivist
+from agents.sound_engineer import generate_audio
+from agents.cinematographer import VideoClip
+from utils.editor import Editor
 from moviepy import VideoFileClip
 
 def resume_run(scenario_id: str):

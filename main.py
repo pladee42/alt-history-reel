@@ -12,7 +12,7 @@ from datetime import datetime
 # Add project root to path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from manager import parse_args, init_settings, print_settings, resolve_config_path
+from helpers.manager import parse_args, init_settings, print_settings, resolve_config_path
 
 
 def backup_to_gcs(settings, scenario_id: str, step_name: str = ""):
@@ -25,7 +25,7 @@ def backup_to_gcs(settings, scenario_id: str, step_name: str = ""):
     
     try:
         from pathlib import Path
-        from distributor import GCSDistributor
+        from utils.distributor import GCSDistributor
         
         scenario_folder = Path(settings.output_dir) / scenario_id
         if not scenario_folder.exists():
@@ -55,10 +55,10 @@ def run_phase_2(settings, dry_run: bool = False):
         print("   [DRY RUN] Would verify with Gemini Vision Gate")
         return True
     
-    from screenwriter import generate_scenario
-    from archivist import Archivist
-    from art_department import ArtDepartment
-    from prompt_improver import PromptImprover
+    from agents.screenwriter import generate_scenario
+    from utils.archivist import Archivist
+    from agents.art_department import ArtDepartment
+    from agents.prompt_improver import PromptImprover
     
     # Initialize archivist early for duplicate checking
     archivist = Archivist(settings.google_sheet_id)
@@ -139,9 +139,9 @@ def run_phase_3(settings, dry_run: bool = False):
         print("   ❌ Context missing (Phase 2 did not run or failed). Cannot run Phase 3 standalone yet.")
         return False
         
-    from cinematographer import animate_keyframes
-    from sound_engineer import generate_audio
-    from archivist import Archivist
+    from agents.cinematographer import animate_keyframes
+    from agents.sound_engineer import generate_audio
+    from utils.archivist import Archivist
     
     output_dir = settings.output_dir
     
@@ -192,7 +192,7 @@ def run_phase_4(settings, dry_run: bool = False):
     
     if not scenario or not video_clips:
         print("   ⚠️  Context missing. Attempting to resume from latest findings...")
-        from archivist import Archivist
+        from utils.archivist import Archivist
         archivist = Archivist(settings.google_sheet_id)
         
         # Find latest ANIMATION_DONE scenario
@@ -217,8 +217,8 @@ def run_phase_4(settings, dry_run: bool = False):
             # SoundEngineer: `scenario_dir = self.output_dir / scenario_id` -> `audio_{stage}.mp3`
             
             # Re-building VideoClips (assuming they are in output_dir, checking file existence)
-            from cinematographer import VideoClip
-            from sound_engineer import AudioClip
+            from agents.cinematographer import VideoClip
+            from agents.sound_engineer import AudioClip
             
             video_clips = []
             audio_clips = []
@@ -250,9 +250,9 @@ def run_phase_4(settings, dry_run: bool = False):
             print("   ❌ No resumable scenario found (Status=ANIMATION_DONE). Run Phase 3 first.")
             return False
         
-    from editor import assemble_video
-    from archivist import Archivist
-    from distributor import Distributor, GCSDistributor
+    from utils.editor import assemble_video
+    from utils.archivist import Archivist
+    from utils.distributor import Distributor, GCSDistributor
     
     output_dir = settings.output_dir
     
@@ -300,7 +300,7 @@ def run_phase_4(settings, dry_run: bool = False):
         
         # Update cost in Google Sheets
         try:
-            from cost_tracker import cost_tracker
+            from utils.cost_tracker import cost_tracker
             scenario_cost = cost_tracker.get_scenario_total(scenario.id)
             if scenario_cost > 0:
                 archivist.update_cost(scenario.id, scenario_cost)
@@ -376,7 +376,7 @@ def main():
     else:
         # Print cost tracking summary
         try:
-            from cost_tracker import cost_tracker
+            from utils.cost_tracker import cost_tracker
             cost_tracker.print_summary()
         except ImportError:
             pass  # Cost tracking not available

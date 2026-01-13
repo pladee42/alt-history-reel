@@ -21,12 +21,12 @@ from PIL import Image
 import requests
 from dotenv import load_dotenv
 
-from screenwriter import Scenario
-from manager import Settings, StyleConfig, load_prompt
+from agents.screenwriter import Scenario
+from helpers.manager import Settings, StyleConfig, load_prompt
 
 # Import Kie.ai client if available
 try:
-    from kie_client import KieClient
+    from utils.kie_client import KieClient
     KIE_AVAILABLE = True
 except ImportError:
     KIE_AVAILABLE = False
@@ -35,7 +35,7 @@ except ImportError:
 load_dotenv(override=True)
 
 # Get project root directory
-PROJECT_ROOT = Path(__file__).parent
+PROJECT_ROOT = Path(__file__).parent.parent
 
 
 
@@ -243,7 +243,7 @@ Reply PASS if consistent, FAIL if not."""
         
         # Log cost
         try:
-            from cost_tracker import cost_tracker
+            from utils.cost_tracker import cost_tracker
             cost_tracker.log_kie_call(
                 model="nano-banana-pro",
                 scenario_id=scenario_id,
@@ -332,7 +332,7 @@ Reply PASS if consistent, FAIL if not."""
         
         # Log cost
         try:
-            from cost_tracker import log_image_generation
+            from utils.cost_tracker import log_image_generation
             log_image_generation(
                 self.img2img_model if reference_image_url else self.txt2img_model,
                 scenario_id,
@@ -475,8 +475,8 @@ Reply PASS if consistent, FAIL if not."""
 
 if __name__ == "__main__":
     import yaml
-    from manager import load_config, resolve_config_path, parse_args
-    from screenwriter import generate_scenario
+    from helpers.manager import load_config, resolve_config_path, parse_args
+    from agents.screenwriter import generate_scenario
     
     print("\n" + "=" * 50)
     print("🎨 Testing Art Department")

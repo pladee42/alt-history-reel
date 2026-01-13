@@ -11,11 +11,11 @@ sys.path.append(str(PROJECT_ROOT))
 # Load Env (for Drive, Sheets API)
 load_dotenv(override=True)
 
-from manager import init_settings
-from archivist import Archivist
-from editor import Editor
-from sound_engineer import AudioClip
-from cinematographer import VideoClip
+from helpers.manager import init_settings
+from utils.archivist import Archivist
+from utils.editor import Editor
+from agents.sound_engineer import AudioClip
+from agents.cinematographer import VideoClip
 from moviepy import VideoFileClip
 
 def test_editor(scenario_id: str):

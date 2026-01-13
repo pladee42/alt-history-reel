@@ -13,8 +13,8 @@ sys.path.append(str(PROJECT_ROOT))
 from dotenv import load_dotenv
 load_dotenv(override=True)
 
-from manager import init_settings
-from distributor import Distributor
+from helpers.manager import init_settings
+from utils.distributor import Distributor
 
 def test_drive_upload(scenario_id: str = None):
     """Test Drive upload with an existing video file."""

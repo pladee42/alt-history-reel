@@ -6,8 +6,8 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).parent.parent
 sys.path.append(str(PROJECT_ROOT))
 
-from manager import init_settings
-from archivist import Archivist, HEADERS
+from helpers.manager import init_settings
+from utils.archivist import Archivist, HEADERS
 
 def update_headers():
     print("🔄 Updating Google Sheet Headers to match new schema...")

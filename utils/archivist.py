@@ -17,7 +17,7 @@ import google.auth
 from google.oauth2.service_account import Credentials
 from dotenv import load_dotenv
 
-from screenwriter import Scenario, StageData
+from agents.screenwriter import Scenario, StageData
 
 # Load environment variables
 load_dotenv(override=True)

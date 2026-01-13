@@ -7,12 +7,12 @@ import dataclasses
 # Add parent to path
 sys.path.append(str(Path(__file__).parent.parent))
 
-from sound_engineer import SoundEngineer
-from screenwriter import Scenario, StageData
+from agents.sound_engineer import SoundEngineer
+from agents.screenwriter import Scenario, StageData
 
 def test_prompt_construction():
-    with patch('sound_engineer.fal_client') as mock_fal, \
-         patch('sound_engineer.requests') as mock_requests, \
+    with patch('agents.sound_engineer.fal_client') as mock_fal, \
+         patch('agents.sound_engineer.requests') as mock_requests, \
          patch('builtins.open', new_callable=MagicMock):
         
         mock_fal.subscribe.return_value = {"audio": {"url": "http://test/audio.mp3"}}
@@ -23,7 +23,7 @@ def test_prompt_construction():
         # or just instantiate Sound Engineer and inject config manually if possible.
         # But SoundEngineer loads config in __init__. We might need to mock yaml.safe_load or ignore config load.
         
-        with patch('sound_engineer.load_model_config') as mock_config:
+        with patch('agents.sound_engineer.load_model_config') as mock_config:
             mock_config.return_value = {
                 "fal_audio": {
                     "model": "fal-ai/elevenlabs/sound-effects/v2",

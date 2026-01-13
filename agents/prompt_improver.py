@@ -10,8 +10,8 @@ from typing import Optional
 import google.genai as genai
 from dotenv import load_dotenv
 
-from screenwriter import Scenario
-from manager import load_prompt
+from agents.screenwriter import Scenario
+from helpers.manager import load_prompt
 
 
 load_dotenv()

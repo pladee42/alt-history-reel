@@ -2,6 +2,7 @@
 sound_engineer.py - Audio Generation
 
 Generates ambient sound effects for video stages using Fal.ai audio models.
+Can be skipped when using Kie.ai Seedance with native audio generation.
 """
 
 import os
@@ -43,7 +44,7 @@ class AudioClip:
 
 
 class SoundEngineer:
-    """Generates sound effects using Fal.ai."""
+    """Generates sound effects using Fal.ai (unless Seedance audio is enabled)."""
     
     def __init__(self, output_dir: str):
         """
@@ -57,11 +58,29 @@ class SoundEngineer:
         
         # Load model configuration
         self.config = load_model_config()
-        audio_config = self.config.get("fal_audio", {})
+        
+        # Check if we should skip audio generation (Seedance has native audio)
+        kie_config = self.config.get("kie", {})
+        audio_config = self.config.get("audio", {})
+        kie_video_config = self.config.get("kie_video", {})
+        
+        kie_enabled = kie_config.get("enabled", False)
+        use_kie_audio = audio_config.get("use_kie_audio", True)
+        seedance_audio = kie_video_config.get("generate_audio", True)
+        
+        # Skip if: Kie.ai enabled + use_kie_audio + Seedance generating audio
+        self.skip_audio = kie_enabled and use_kie_audio and seedance_audio
+        
+        if self.skip_audio:
+            print(f"🔊 Sound Engineer: SKIPPED (using Seedance native audio)")
+            return
+        
+        # Fal.ai audio config
+        fal_audio_config = self.config.get("fal_audio", {})
         
         # Get model and settings from config
-        self.audio_model = audio_config.get("model", "fal-ai/cassetteai/sound-effects")
-        self.default_duration = audio_config.get("duration", 5.0)
+        self.audio_model = fal_audio_config.get("model", "fal-ai/cassetteai/sound-effects")
+        self.default_duration = fal_audio_config.get("duration", 5.0)
         
         # Verify FAL_KEY exists
         fal_key = os.getenv("FAL_KEY")
@@ -183,8 +202,13 @@ class SoundEngineer:
             scenario: The scenario with mood data for each stage
             
         Returns:
-            List of AudioClip objects
+            List of AudioClip objects (empty if using Seedance native audio)
         """
+        # Skip if using Seedance native audio
+        if self.skip_audio:
+            print(f"\n🔊 Audio generation skipped (using Seedance native audio)")
+            return []
+        
         print(f"\n🔊 Generating audio for: {scenario.premise[:50]}...")
         
         audio_clips = []

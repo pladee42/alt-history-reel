@@ -1,0 +1,385 @@
+"""
+kie_client.py - Kie.ai API Client
+
+Provides a unified interface to Kie.ai API for:
+- Text-to-Image (nano-banana-pro)
+- Image-to-Image (nano-banana-pro with image_urls)
+- Image-to-Video (Seedance 1.5 Pro with optional audio)
+
+API Documentation: https://kie.ai/docs
+"""
+
+import os
+import time
+import base64
+import requests
+from pathlib import Path
+from typing import Optional, Dict, Any, List
+from dataclasses import dataclass
+
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv(override=True)
+
+
+@dataclass
+class KieImageResult:
+    """Result from image generation."""
+    image_url: str
+    task_id: str
+
+
+@dataclass
+class KieVideoResult:
+    """Result from video generation."""
+    video_url: str
+    task_id: str
+    has_audio: bool = False
+
+
+class KieClient:
+    """
+    Client for Kie.ai API with task polling.
+    
+    Usage:
+        client = KieClient()
+        
+        # Text-to-image
+        result = client.generate_image("a sunset over mountains", aspect_ratio="9:16")
+        
+        # Image-to-image
+        result = client.edit_image("add rain", reference_image_path="input.png")
+        
+        # Image-to-video
+        result = client.generate_video("slow zoom in", image_path="frame.png", generate_audio=True)
+    """
+    
+    BASE_URL = "https://api.kie.ai/api/v1"
+    
+    def __init__(self):
+        """Initialize client with API key from environment."""
+        self.api_key = os.getenv("KIE_AI_KEY")
+        if not self.api_key:
+            raise ValueError("KIE_AI_KEY not found in environment")
+        
+        self.headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json"
+        }
+        
+        print(f"🔌 Kie.ai client initialized")
+    
+    # =========================================================================
+    # Core API Methods
+    # =========================================================================
+    
+    def create_task(self, model: str, params: Dict[str, Any]) -> str:
+        """
+        Create a generation task and return task_id.
+        
+        Args:
+            model: Model name (e.g., "nano-banana-pro", "bytedance/seedance-1.5-pro")
+            params: Model-specific parameters
+            
+        Returns:
+            task_id for polling
+        """
+        payload = {
+            "model": model,
+            "input": params
+        }
+        
+        response = requests.post(
+            f"{self.BASE_URL}/jobs/createTask",
+            headers=self.headers,
+            json=payload,
+            timeout=30
+        )
+        response.raise_for_status()
+        
+        result = response.json()
+        task_id = result.get("task_id") or result.get("taskId")
+        
+        if not task_id:
+            raise ValueError(f"No task_id in response: {result}")
+        
+        return task_id
+    
+    def query_task(self, task_id: str) -> Dict[str, Any]:
+        """
+        Query task status and result.
+        
+        Args:
+            task_id: Task ID from create_task
+            
+        Returns:
+            Task status and output if completed
+        """
+        response = requests.get(
+            f"{self.BASE_URL}/jobs/queryTask",
+            headers=self.headers,
+            params={"task_id": task_id},
+            timeout=30
+        )
+        response.raise_for_status()
+        return response.json()
+    
+    def wait_for_completion(
+        self, 
+        task_id: str, 
+        timeout: int = 300, 
+        poll_interval: int = 3
+    ) -> Dict[str, Any]:
+        """
+        Poll until task completes or timeout.
+        
+        Args:
+            task_id: Task ID to poll
+            timeout: Maximum wait time in seconds
+            poll_interval: Time between polls in seconds
+            
+        Returns:
+            Completed task result with output
+        """
+        start_time = time.time()
+        
+        while time.time() - start_time < timeout:
+            result = self.query_task(task_id)
+            status = result.get("status", "").lower()
+            
+            if status in ["completed", "success", "done"]:
+                return result
+            
+            if status in ["failed", "error"]:
+                error_msg = result.get("error") or result.get("message") or "Unknown error"
+                raise RuntimeError(f"Task {task_id} failed: {error_msg}")
+            
+            # Still processing
+            time.sleep(poll_interval)
+        
+        raise TimeoutError(f"Task {task_id} timed out after {timeout}s")
+    
+    # =========================================================================
+    # Image Upload Helpers
+    # =========================================================================
+    
+    def _encode_image_base64(self, image_path: str) -> str:
+        """Encode a local image to base64 data URI."""
+        path = Path(image_path)
+        
+        # Determine MIME type
+        suffix = path.suffix.lower()
+        mime_types = {
+            ".png": "image/png",
+            ".jpg": "image/jpeg", 
+            ".jpeg": "image/jpeg",
+            ".webp": "image/webp"
+        }
+        mime_type = mime_types.get(suffix, "image/png")
+        
+        with open(path, "rb") as f:
+            encoded = base64.b64encode(f.read()).decode()
+        
+        return f"data:{mime_type};base64,{encoded}"
+    
+    def _upload_to_kie(self, image_path: str) -> str:
+        """
+        Upload image to Kie.ai and get a URL.
+        
+        Note: If Kie.ai has an upload endpoint, use it here.
+        Otherwise, fall back to base64 encoding.
+        """
+        # For now, use base64 encoding which Kie.ai accepts
+        return self._encode_image_base64(image_path)
+    
+    # =========================================================================
+    # High-Level Image Methods
+    # =========================================================================
+    
+    def generate_image(
+        self, 
+        prompt: str, 
+        aspect_ratio: str = "9:16",
+        resolution: str = "1K"
+    ) -> KieImageResult:
+        """
+        Generate an image from text using nano-banana-pro.
+        
+        Args:
+            prompt: Text description of the image
+            aspect_ratio: Output aspect ratio (9:16, 16:9, 1:1, etc.)
+            resolution: Output resolution (1K, 2K, 4K)
+            
+        Returns:
+            KieImageResult with image URL
+        """
+        print(f"   🖼️ Kie.ai: Generating image (nano-banana-pro)...")
+        
+        task_id = self.create_task("nano-banana-pro", {
+            "prompt": prompt,
+            "aspect_ratio": aspect_ratio,
+            "resolution": resolution,
+            "num_images": 1
+        })
+        
+        result = self.wait_for_completion(task_id)
+        
+        # Extract image URL from response
+        output = result.get("output", {})
+        images = output.get("images") or output.get("image_urls") or []
+        
+        if not images:
+            # Try alternative response structure
+            image_url = output.get("image_url") or output.get("url")
+            if not image_url:
+                raise ValueError(f"No image URL in response: {result}")
+        else:
+            image_url = images[0] if isinstance(images[0], str) else images[0].get("url")
+        
+        print(f"      ✅ Image generated")
+        
+        return KieImageResult(image_url=image_url, task_id=task_id)
+    
+    def edit_image(
+        self, 
+        prompt: str, 
+        reference_image_path: str,
+        aspect_ratio: str = "9:16",
+        resolution: str = "1K"
+    ) -> KieImageResult:
+        """
+        Edit/transform an image using nano-banana-pro.
+        
+        Args:
+            prompt: Edit instructions
+            reference_image_path: Path to the reference image
+            aspect_ratio: Output aspect ratio
+            resolution: Output resolution
+            
+        Returns:
+            KieImageResult with edited image URL
+        """
+        print(f"   🖼️ Kie.ai: Editing image (nano-banana-pro)...")
+        
+        # Encode reference image
+        image_data = self._encode_image_base64(reference_image_path)
+        
+        task_id = self.create_task("nano-banana-pro", {
+            "prompt": prompt,
+            "image_urls": [image_data],  # nano-banana-pro uses image_urls for editing
+            "aspect_ratio": aspect_ratio,
+            "resolution": resolution,
+            "num_images": 1
+        })
+        
+        result = self.wait_for_completion(task_id)
+        
+        # Extract image URL from response
+        output = result.get("output", {})
+        images = output.get("images") or output.get("image_urls") or []
+        
+        if not images:
+            image_url = output.get("image_url") or output.get("url")
+            if not image_url:
+                raise ValueError(f"No image URL in response: {result}")
+        else:
+            image_url = images[0] if isinstance(images[0], str) else images[0].get("url")
+        
+        print(f"      ✅ Image edited")
+        
+        return KieImageResult(image_url=image_url, task_id=task_id)
+    
+    # =========================================================================
+    # High-Level Video Methods
+    # =========================================================================
+    
+    def generate_video(
+        self,
+        prompt: str,
+        image_path: str,
+        duration: int = 5,
+        resolution: str = "720p",
+        aspect_ratio: str = "9:16",
+        generate_audio: bool = True
+    ) -> KieVideoResult:
+        """
+        Generate video from image using Seedance 1.5 Pro.
+        
+        Args:
+            prompt: Motion/action description
+            image_path: Path to the input image
+            duration: Video duration in seconds (4-12)
+            resolution: Output resolution (480p, 720p, 1080p)
+            aspect_ratio: Output aspect ratio
+            generate_audio: Whether to generate synchronized audio
+            
+        Returns:
+            KieVideoResult with video URL and audio info
+        """
+        print(f"   🎥 Kie.ai: Generating video (seedance-1.5-pro)...")
+        
+        # Encode input image
+        image_data = self._encode_image_base64(image_path)
+        
+        task_id = self.create_task("bytedance/seedance-1.5-pro", {
+            "prompt": prompt,
+            "image_url": image_data,
+            "duration": duration,
+            "resolution": resolution,
+            "aspect_ratio": aspect_ratio,
+            "generate_audio": generate_audio
+        })
+        
+        # Video generation takes longer
+        result = self.wait_for_completion(task_id, timeout=600, poll_interval=5)
+        
+        # Extract video URL from response
+        output = result.get("output", {})
+        video_url = output.get("video_url") or output.get("url")
+        
+        if not video_url:
+            # Try alternative structures
+            video = output.get("video", {})
+            video_url = video.get("url") if isinstance(video, dict) else video
+        
+        if not video_url:
+            raise ValueError(f"No video URL in response: {result}")
+        
+        print(f"      ✅ Video generated" + (" (with audio)" if generate_audio else ""))
+        
+        return KieVideoResult(
+            video_url=video_url,
+            task_id=task_id,
+            has_audio=generate_audio
+        )
+
+
+# Global singleton - only created if KIE_AI_KEY is set
+def get_kie_client() -> Optional[KieClient]:
+    """Get the Kie.ai client if API key is configured."""
+    if os.getenv("KIE_AI_KEY"):
+        return KieClient()
+    return None
+
+
+if __name__ == "__main__":
+    # Quick connectivity test
+    print("=" * 50)
+    print("🧪 Testing Kie.ai Client")
+    print("=" * 50)
+    
+    api_key = os.getenv("KIE_AI_KEY")
+    if not api_key:
+        print("❌ KIE_AI_KEY not set in environment")
+        print("   Add it to your .env file to test the client")
+    else:
+        print(f"✅ KIE_AI_KEY is configured")
+        print(f"   Key prefix: {api_key[:8]}...")
+        
+        # Try to initialize client
+        try:
+            client = KieClient()
+            print("✅ Client initialized successfully")
+        except Exception as e:
+            print(f"❌ Failed to initialize client: {e}")

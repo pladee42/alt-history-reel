@@ -56,3 +56,40 @@ fal_audio:
   model: "fal-ai/elevenlabs/sound-effects/v2"
   duration: 5.0  # seconds per sound effect
   prompt_influence: 0.7 # Balance between prompt and creativity
+
+# ============================================
+# KIE.AI (Image Generation) - Cheaper Alternative
+# ============================================
+# Kie.ai provides access to nano-banana-pro (Gemini 3 Pro Image)
+# Set enabled: true to use Kie.ai instead of Fal.ai
+kie:
+  enabled: false  # Set to true to use Kie.ai for image generation
+  
+  # Text-to-Image model (for Stage 1)
+  text_to_image:
+    model: "nano-banana-pro"
+    aspect_ratio: "9:16"  # Supported: 1:1, 9:16, 16:9, 4:3, 3:4, etc.
+    
+  # Image-to-Image model (for Stages 2-3)  
+  image_to_image:
+    model: "nano-banana-pro"
+    # Uses image editing capability of nano-banana-pro
+
+# ============================================
+# KIE.AI (Video Generation) - Phase 3
+# ============================================
+# Seedance 1.5 Pro: ByteDance's image-to-video with native audio
+kie_video:
+  model: "bytedance/seedance-1.5-pro"
+  duration: 5  # seconds (4-12 supported)
+  resolution: "720p"  # 480p, 720p, 1080p
+  aspect_ratio: "9:16"
+  generate_audio: true  # Seedance can generate synchronized audio
+
+# ============================================
+# Audio Configuration
+# ============================================
+audio:
+  # When using Kie.ai + Seedance with generate_audio=true,
+  # optionally skip separate audio generation from SoundEngineer
+  use_kie_audio: true  # If true and kie.enabled, skip SoundEngineer

@@ -172,10 +172,13 @@ class Cinematographer:
             final_prompt = f"{motion_prompt}. Audio: {audio_prompt}"
             print(f"      🎵 Including audio prompt: {audio_prompt[:50]}...")
         
+        if not keyframe.url:
+            raise ValueError(f"Keyframe {keyframe.stage} has no URL. Kie.ai requires image URLs for video generation.")
+            
         try:
             result = self.kie_client.generate_video(
                 prompt=final_prompt,
-                image_path=keyframe.path,
+                image_url=keyframe.url,
                 duration=self.kie_duration,
                 resolution=self.kie_resolution,
                 aspect_ratio=self.kie_aspect_ratio,

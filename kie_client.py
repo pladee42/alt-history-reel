@@ -333,7 +333,7 @@ class KieClient:
     def generate_video(
         self,
         prompt: str,
-        image_path: str,
+        image_url: str,
         duration: int = 5,
         resolution: str = "720p",
         aspect_ratio: str = "9:16",
@@ -344,7 +344,7 @@ class KieClient:
         
         Args:
             prompt: Motion/action description
-            image_path: Path to the input image
+            image_url: URL to the input image (NOT base64)
             duration: Video duration in seconds (4-12)
             resolution: Output resolution (480p, 720p, 1080p)
             aspect_ratio: Output aspect ratio
@@ -355,12 +355,10 @@ class KieClient:
         """
         print(f"   🎥 Kie.ai: Generating video (seedance-1.5-pro)...")
         
-        # Encode input image
-        image_data = self._encode_image_base64(image_path)
-        
+        # Kie.ai expects image URLs for Seedance 1.5 Pro
         task_id = self.create_task("bytedance/seedance-1.5-pro", {
             "prompt": prompt,
-            "image": image_data,  # Seedance uses "image" not "image_url"
+            "image": image_url,  # Pass URL directly
             "duration": str(duration),  # Kie.ai expects duration as string
             "resolution": resolution,
             "aspect_ratio": aspect_ratio,

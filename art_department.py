@@ -56,6 +56,7 @@ class Keyframe:
     stage: int
     path: str
     prompt: str
+    url: str = None  # Optional URL for cloud-based video generation
 
 
 class ArtDepartment:
@@ -388,7 +389,8 @@ Reply PASS if consistent, FAIL if not."""
             keyframes.append(Keyframe(
                 stage=stage_num,
                 path=path,
-                prompt=prompt
+                prompt=prompt,
+                url=url
             ))
         
         return keyframes

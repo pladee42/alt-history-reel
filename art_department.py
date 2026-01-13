@@ -1,7 +1,8 @@
 """
 art_department.py - Image Generation with Vision Gate
 
-Uses Fal.ai (Nano Banana/Flux) to generate keyframes for each stage.
+Uses Fal.ai or Kie.ai (Nano Banana/Flux) to generate keyframes for each stage.
+Supports provider selection via model_config.yaml.
 Verifies consistency using Gemini Vision before proceeding.
 """
 
@@ -22,6 +23,13 @@ from dotenv import load_dotenv
 
 from screenwriter import Scenario
 from manager import Settings, StyleConfig, load_prompt
+
+# Import Kie.ai client if available
+try:
+    from kie_client import KieClient
+    KIE_AVAILABLE = True
+except ImportError:
+    KIE_AVAILABLE = False
 
 # Load environment variables
 load_dotenv(override=True)
@@ -80,10 +88,25 @@ class ArtDepartment:
         self.img_width = img_size.get("width", 720)
         self.img_height = img_size.get("height", 1280)
         
-        # Fal.ai client uses FAL_KEY from environment
-        fal_key = os.getenv("FAL_KEY")
-        if not fal_key:
-            raise ValueError("FAL_KEY not found in environment")
+        # Check if Kie.ai is enabled
+        kie_config = self.config.get("kie", {})
+        self.use_kie = kie_config.get("enabled", False) and KIE_AVAILABLE
+        
+        if self.use_kie:
+            # Initialize Kie.ai client
+            kie_key = os.getenv("KIE_AI_KEY")
+            if not kie_key:
+                print("   ⚠️ KIE_AI_KEY not found, falling back to Fal.ai")
+                self.use_kie = False
+            else:
+                self.kie_client = KieClient()
+                self.kie_aspect_ratio = kie_config.get("text_to_image", {}).get("aspect_ratio", "9:16")
+        
+        # Fal.ai client uses FAL_KEY from environment (fallback or primary)
+        if not self.use_kie:
+            fal_key = os.getenv("FAL_KEY")
+            if not fal_key:
+                raise ValueError("FAL_KEY not found in environment")
         
         # Gemini Vision Gate using new Client API
         gemini_config = self.config.get("gemini", {})
@@ -100,9 +123,15 @@ class ArtDepartment:
         except FileNotFoundError:
             self.vision_prompt_template = self._get_default_vision_prompt()
         
+        # Determine provider name for display
+        if self.use_kie:
+            provider = "Kie.ai (nano-banana-pro)"
+        else:
+            provider = f"Fal.ai ({self.txt2img_model})"
+        
         print(f"🎨 Art Department initialized")
         print(f"   Style: {settings.style.name}")
-        print(f"   Models: {self.txt2img_model} / {self.img2img_model}")
+        print(f"   Provider: {provider}")
         print(f"   Output: {self.output_dir}")
     
     def _get_default_vision_prompt(self) -> str:
@@ -147,18 +176,97 @@ Reply PASS if consistent, FAIL if not."""
         return ", ".join(prompt_parts)
     
     def generate_keyframe(self, prompt: str, stage_num: int, scenario_id: str, 
-                          reference_image_url: str = None) -> str:
+                          reference_image_url: str = None,
+                          reference_image_path: str = None) -> Tuple[str, str]:
         """
-        Generate a single keyframe image using Fal.ai.
+        Generate a single keyframe image using Fal.ai or Kie.ai.
         
         Args:
             prompt: The image prompt
             stage_num: Stage number for filename
             scenario_id: Scenario ID for folder organization
-            reference_image_url: Optional reference image URL for img2img (stages 2-3)
+            reference_image_url: Optional reference image URL for img2img (Fal.ai)
+            reference_image_path: Optional reference image path for img2img (Kie.ai)
             
         Returns:
-            Path to the saved image
+            Tuple of (path to saved image, image URL)
+        """
+        # Route to appropriate provider
+        if self.use_kie:
+            return self._generate_with_kie(prompt, stage_num, scenario_id, reference_image_path)
+        else:
+            return self._generate_with_fal(prompt, stage_num, scenario_id, reference_image_url)
+    
+    def _generate_with_kie(self, prompt: str, stage_num: int, scenario_id: str,
+                           reference_image_path: str = None) -> Tuple[str, str]:
+        """
+        Generate image using Kie.ai nano-banana-pro.
+        
+        Args:
+            prompt: The image prompt
+            stage_num: Stage number for filename
+            scenario_id: Scenario ID for folder organization
+            reference_image_path: Optional path to reference image for editing
+            
+        Returns:
+            Tuple of (path to saved image, image URL)
+        """
+        print(f"   🖼️ Generating keyframe {stage_num} via Kie.ai{'(edit)' if reference_image_path else ''}...")
+        
+        # Create scenario folder
+        scenario_dir = self.output_dir / scenario_id
+        scenario_dir.mkdir(exist_ok=True)
+        
+        if reference_image_path:
+            # Image-to-image editing for stages 2-3
+            result = self.kie_client.edit_image(
+                prompt=prompt,
+                reference_image_path=reference_image_path,
+                aspect_ratio=self.kie_aspect_ratio
+            )
+        else:
+            # Text-to-image for stage 1
+            result = self.kie_client.generate_image(
+                prompt=prompt,
+                aspect_ratio=self.kie_aspect_ratio
+            )
+        
+        image_url = result.image_url
+        
+        # Download and save the image
+        image_path = scenario_dir / f"frame_{stage_num}.png"
+        response = requests.get(image_url)
+        with open(image_path, 'wb') as f:
+            f.write(response.content)
+        
+        # Log cost
+        try:
+            from cost_tracker import cost_tracker
+            cost_tracker.log_kie_call(
+                model="nano-banana-pro",
+                scenario_id=scenario_id,
+                operation="text_to_image" if not reference_image_path else "image_to_image",
+                metadata={"stage": stage_num}
+            )
+        except (ImportError, AttributeError):
+            pass
+        
+        print(f"      ✅ Saved: {image_path.name}")
+        return str(image_path), image_url
+    
+    def _generate_with_fal(self, prompt: str, stage_num: int, scenario_id: str,
+                           reference_image_url: str = None) -> Tuple[str, str]:
+        """
+        Generate image using Fal.ai.
+        
+        Args:
+            prompt: The image prompt
+            stage_num: Stage number for filename
+            scenario_id: Scenario ID for folder organization
+            reference_image_url: Optional reference image URL for img2img
+            
+        Returns:
+            Tuple of (path to saved image, image URL)
         """
         print(f"   🖼️ Generating keyframe {stage_num}{'(img2img)' if reference_image_url else ''}...")
         
@@ -256,15 +364,25 @@ Reply PASS if consistent, FAIL if not."""
         print(f"\n🎨 Generating keyframes for: {scenario.premise[:50]}...")
         
         keyframes = []
-        reference_url = None  # Will be set after stage 1
+        reference_url = None   # For Fal.ai (uses URLs)
+        reference_path = None  # For Kie.ai (uses local file paths)
         
         for stage_num in [1, 2, 3]:
             prompt = self.build_image_prompt(scenario, stage_num)
-            path, url = self.generate_keyframe(prompt, stage_num, scenario.id, reference_url)
             
-            # Use stage 1's URL as reference for stages 2-3
+            # Pass appropriate reference based on provider
+            path, url = self.generate_keyframe(
+                prompt, 
+                stage_num, 
+                scenario.id, 
+                reference_image_url=reference_url,
+                reference_image_path=reference_path
+            )
+            
+            # Use stage 1's output as reference for stages 2-3
             if stage_num == 1:
-                reference_url = url
+                reference_url = url    # For Fal.ai
+                reference_path = path  # For Kie.ai
             
             keyframes.append(Keyframe(
                 stage=stage_num,

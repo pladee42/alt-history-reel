@@ -3,6 +3,7 @@ cost_tracker.py - API Usage and Cost Tracking
 
 Tracks API calls and estimates costs for:
 - Fal.ai (Image generation, Video generation, TTS)
+- Kie.ai (Image generation, Video generation with audio)
 - Google Gemini (Text generation, Vision)
 - Google Cloud Storage (uploads)
 
@@ -33,6 +34,21 @@ PRICING = {
     "fal-ai/flux-pro/kontext": 0.03,          # ~$0.03 per edit
     "fal-ai/kling-video/v1.6/pro/image-to-video": 0.10,  # ~$0.10 per 5s video
     "fal-ai/elevenlabs/tts": 0.01,            # ~$0.01 per 1000 chars
+    
+    # Kie.ai pricing (credit-based, $0.005/credit)
+    # Image: nano-banana-pro = 18 credits/image at 1K/2K
+    # Video: seedance-1.5-pro at 720p
+    "kie-nano-banana-pro": 0.09,              # 18 credits = $0.09 per image
+    "kie-nano-banana-pro-edit": 0.09,         # 18 credits = $0.09 per edit
+    "kie-nano-banana-pro-4k": 0.12,           # 24 credits = $0.12 per 4K image
+    "kie-seedance-1.5-pro": {                 # Varies by duration and audio
+        "720p_5s": 0.07,           # 14 credits, no audio
+        "720p_5s_audio": 0.14,     # 28 credits, with audio  
+        "720p_8s": 0.14,           # 28 credits, no audio
+        "720p_8s_audio": 0.28,     # 56 credits, with audio
+        "480p_5s": 0.04,           # 8 credits, no audio
+        "480p_5s_audio": 0.07,     # 14 credits, with audio
+    },
     
     # Gemini pricing (per 1M tokens - we'll estimate tokens)
     "gemini-2.0-flash": {
@@ -130,6 +146,69 @@ class CostTracker:
             operation=operation,
             estimated_cost=cost,
             metadata=metadata or {}
+        )
+        self.calls.append(call)
+        return cost
+    
+    def log_kie_call(
+        self,
+        model: str,
+        scenario_id: str,
+        operation: str,
+        metadata: Optional[Dict] = None
+    ) -> float:
+        """
+        Log a Kie.ai API call.
+        
+        Args:
+            model: Kie model name (e.g., "nano-banana-pro", "bytedance/seedance-1.5-pro")
+            scenario_id: Current scenario ID
+            operation: Type of operation (e.g., "text_to_image", "image_to_video")
+            metadata: Optional extra info (duration, has_audio, resolution, etc.)
+            
+        Returns:
+            Estimated cost of this call
+        """
+        metadata = metadata or {}
+        
+        # Determine pricing based on model and parameters
+        if "nano-banana" in model.lower():
+            # Image generation
+            resolution = metadata.get("resolution", "1K")
+            if resolution == "4K":
+                cost = PRICING.get("kie-nano-banana-pro-4k", 0.12)
+            else:
+                if operation == "image_to_image":
+                    cost = PRICING.get("kie-nano-banana-pro-edit", 0.09)
+                else:
+                    cost = PRICING.get("kie-nano-banana-pro", 0.09)
+        
+        elif "seedance" in model.lower():
+            # Video generation - price varies by duration, resolution, audio
+            duration = metadata.get("duration_seconds", 5)
+            resolution = metadata.get("resolution", "720p")
+            has_audio = metadata.get("has_audio", False)
+            
+            # Build pricing key
+            res = "720p" if "720" in str(resolution) else "480p"
+            dur = "5s" if duration <= 5 else "8s"
+            audio_suffix = "_audio" if has_audio else ""
+            pricing_key = f"{res}_{dur}{audio_suffix}"
+            
+            seedance_pricing = PRICING.get("kie-seedance-1.5-pro", {})
+            cost = seedance_pricing.get(pricing_key, 0.14)  # Default to 720p_5s_audio
+        else:
+            # Unknown Kie.ai model
+            cost = 0.10
+        
+        call = APICall(
+            timestamp=datetime.now().isoformat(),
+            service="kie",
+            model=model,
+            scenario_id=scenario_id,
+            operation=operation,
+            estimated_cost=cost,
+            metadata=metadata
         )
         self.calls.append(call)
         return cost

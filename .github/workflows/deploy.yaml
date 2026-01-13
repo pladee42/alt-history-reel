@@ -68,6 +68,7 @@ jobs:
             --task-timeout 30m \
             --set-env-vars "GOOGLE_API_KEY=${{ secrets.GOOGLE_API_KEY }}" \
             --set-env-vars "FAL_KEY=${{ secrets.FAL_KEY }}" \
+            --set-env-vars "KIE_AI_KEY=${{ secrets.KIE_AI_KEY }}" \
             --update-secrets "/secrets/sa-key.json=timeline-b:latest" \
             --set-env-vars "GCP_SA_KEY_PATH=/secrets/sa-key.json"
 

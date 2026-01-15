@@ -89,6 +89,18 @@ audio_mood: "cinematic, atmospheric, dramatic, immersive"
 
 # Generation Settings
 image_retries: 3
+
+# Social Publishing (Optional)
+publishing:
+  enabled: true
+  channel_id: "timeline_b"
+  platforms: ["youtube", "tiktok", "instagram"]
+  share_to_facebook: true
+  privacy_status: "public"
+  category_id: "27"
+  description_template: |  # Uses {title} placeholder
+    {title} 🤯
+    History books DELETED this timeline...
 ```
 
 **Future styles:** `vintage.yaml`, `anime.yaml`, `dystopian.yaml`, etc.
@@ -175,6 +187,9 @@ image_retries: 3
 - Upload to Google Cloud Storage (GCS)
 - Returns public URL for mobile viewing
 - Update Sheets: status = "COMPLETED", video_url = link
+- **SocialPublisher:** Publishes to YouTube/TikTok/Instagram via external API
+  - Reads `SOCIAL_PUBLISHER_API_URL` from environment
+  - Constructs metadata from `description_template` in config
 
 ---
 

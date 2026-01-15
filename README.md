@@ -48,6 +48,7 @@ python main.py --phase 4
 | Fal.ai | `FAL_KEY` |
 | Kie.ai | `KIE_AI_KEY` |
 | Google Sheets/Drive | `GOOGLE_APPLICATION_CREDENTIALS` |
+| Social Publisher API | `SOCIAL_PUBLISHER_API_URL` |
 
 ## Project Structure
 

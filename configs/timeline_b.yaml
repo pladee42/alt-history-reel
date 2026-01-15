@@ -27,3 +27,39 @@ audio_mood: "cinematic, atmospheric, dramatic, immersive"
 # GENERATION SETTINGS
 # ============================================
 image_retries: 3  # Max Vision Gate retries
+
+# ============================================
+# SOCIAL PUBLISHING
+# ============================================
+publishing:
+  enabled: true
+  channel_id: "timeline_b"
+  platforms: 
+    - "youtube"
+    - "tiktok"
+    - "instagram"
+  
+  # Platform-specific settings
+  share_to_facebook: true
+  privacy_status: "public"
+  category_id: "27"  # Education
+  
+  # Description/Caption template
+  # Use {title} as placeholder - will be replaced with cleaned scenario title
+  description_template: |
+    {title} 🤯
+
+    History books DELETED this timeline. 🤫
+    Watch how the borders shift forever... 🗺️
+
+    Nightmare or Utopia? You decide. 👇
+
+    .
+    .
+    -———
+    ⚠️ ARCHIVE NOTES:
+    This video is a fictional "What If" scenario created with AI.
+    The events, figures, and timeline depicted are FICTIONAL and part of an alternative history narrative.
+    Not factual history.
+    -———
+    #TimelineB #AltHistory #WhatIf #AIGenerated #Simulation #History

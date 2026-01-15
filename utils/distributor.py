@@ -214,3 +214,94 @@ if __name__ == "__main__":
     # Test stub
     print("Distributor module loaded")
 
+
+class SocialPublisher:
+    """Manages publishing to social platforms via serverless-social-uploader."""
+    
+    def __init__(self, config: dict):
+        """
+        Initialize SocialPublisher.
+        
+        Args:
+            config: 'publishing' section of the settings
+        """
+        self.config = config
+        self.api_url = os.getenv("SOCIAL_PUBLISHER_API_URL")
+        
+        if not self.api_url:
+            print("   ⚠️  SOCIAL_PUBLISHER_API_URL not set. Publishing disabled.")
+        
+        # Get template from config, or use default
+        self.description_template = config.get("description_template", "{title} 🤯")
+
+    def publish_video(self, video_url: str, scenario: object, dry_run: bool = False) -> bool:
+        """
+        Publish video to configured platforms.
+        
+        Args:
+            video_url: Public URL of the video
+            scenario: Scenario object containing title/metadata
+            dry_run: If True, sends dry_run=true to API
+            
+        Returns:
+            True if request accepted/successful, False otherwise
+        """
+        if not self.config.get("enabled", False):
+            return False
+            
+        if not self.api_url:
+            print("   ❌ Publishing failed: API URL missing")
+            return False
+
+        import requests
+        
+        # 1. Prepare Metadata
+        # Remove bold markdown from title if present
+        clean_title = scenario.title.replace("**", "").replace("*", "").strip()
+        
+        # Construct final title and description from config template
+        final_description = self.description_template.format(title=clean_title)
+
+        
+        # Prepare payload
+        payload = {
+            "channel_id": self.config.get("channel_id"),
+            "video_url": video_url,
+            "platforms": self.config.get("platforms", []),
+            "title": f"{clean_title} 🤯",
+            "description": final_description,
+            "caption": final_description, # Use same for caption
+            "tags": ["history", "geopolitics", "education", "alternate history", "what if", "simulation"],
+            "ai_generated": True,
+            "privacy_status": self.config.get("privacy_status", "private"),
+            "category_id": self.config.get("category_id", "27"),
+            "share_to_facebook": self.config.get("share_to_facebook", False)
+        }
+        
+        # 2. Send Request
+        print(f"\n   🚀 Publishing to Socials ({', '.join(payload['platforms'])})...")
+        print(f"      Title: {payload['title']}")
+        
+        try:
+            # Add dry_run query param
+            params = {"dry_run": "true"} if dry_run else {}
+            
+            response = requests.post(
+                f"{self.api_url}/publish",
+                json=payload,
+                params=params,
+                timeout=30
+            )
+            
+            if response.status_code in [200, 202]:
+                data = response.json()
+                print(f"      ✅ Publish request accepted: {data.get('message', 'OK')}")
+                return True
+            else:
+                print(f"      ❌ Publish request failed: {response.status_code} - {response.text}")
+                return False
+                
+        except Exception as e:
+            print(f"      ❌ Publishing error: {e}")
+            return False
+

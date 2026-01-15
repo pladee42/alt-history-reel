@@ -368,16 +368,17 @@ class Editor:
     def assemble_final_cut(self, scenario: Scenario, video_clips: List[VideoClip], 
                           audio_clips: List[AudioClip]) -> str:
         """
-        Assemble the final video using the Ranking Layout.
+        Assemble the final video using the Ranking Layout with Full Loop.
         
-        Video flow: [Teaser 1.5s] -> [Phase 1] -> [Phase 2] -> [Phase 3]
+        Video flow: [Last 1.5s of S3] -> [Phase 1] -> [Phase 2] -> [Phase 3 (trimmed)]
+        This creates a seamless "full loop" on social media platforms.
         Teaser shows Phase 3 video with all rankings revealed.
         Title overlay appears for first 5 seconds only.
         """
-        print(f"   🎞️ Assembling final cut (Ranking Layout) for: {scenario.premise[:50]}...")
+        print(f"   🎞️ Assembling final cut (Full Loop Layout) for: {scenario.premise[:50]}...")
         
         # Configurable timing
-        teaser_duration = 1.5  # Duration of Phase 3 teaser at start (configurable)
+        teaser_duration = 1.5  # Duration of teaser from END of Phase 3 (full loop)
         title_duration = 5.0   # How long title overlay is visible
         
         final_clips = []
@@ -438,13 +439,14 @@ class Editor:
                 
             loaded_clips[stage_num] = (video, target_duration)
         
-        # 3. Create TEASER clip (reusing Phase 3 video - no double loading!)
-        print(f"      Creating Teaser ({teaser_duration}s from Phase 3)...")
+        # 3. Create TEASER clip from END of Phase 3 (Full Loop effect!)
+        print(f"      Creating Teaser ({teaser_duration}s from END of Phase 3)...")
         if 3 in loaded_clips:
             stage3_video, _ = loaded_clips[3]
             
-            # Extract first N seconds for teaser (subclip reuses existing video in memory)
-            teaser_video = stage3_video.subclipped(0, min(teaser_duration, stage3_video.duration))
+            # Extract LAST N seconds for teaser (creates seamless loop on social media)
+            teaser_start = max(0, stage3_video.duration - teaser_duration)
+            teaser_video = stage3_video.subclipped(teaser_start, stage3_video.duration)
             teaser_cropped = self._resize_to_fill(teaser_video, 1080, 1920).with_position((0, 0))
             
             # Create ALL rankings visible for teaser
@@ -480,6 +482,12 @@ class Editor:
         for stage_num, v_data, a_data in ordered_clips:
             print(f"      Compositing Stage {stage_num}...")
             video, target_duration = loaded_clips[stage_num]
+            
+            # FULL LOOP: Trim Stage 3 to avoid duplicate with teaser
+            if stage_num == 3 and teaser_duration > 0:
+                trimmed_duration = max(1.0, video.duration - teaser_duration)
+                video = video.subclipped(0, trimmed_duration)
+                print(f"      🔄 Stage 3 trimmed by {teaser_duration}s for full loop (now {trimmed_duration:.2f}s)")
             
             # CROP & POSITION VIDEO (Aspect Fill - dynamic resize)
             video_cropped = self._resize_to_fill(video, 1080, 1920)

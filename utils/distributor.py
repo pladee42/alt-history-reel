@@ -262,6 +262,50 @@ class SocialPublisher:
         # Construct final title and description from config template
         final_description = self.description_template.format(title=clean_title)
 
+        # Extract dynamic tags from scenario content (simple keyword matching)
+        base_tags = [
+            "history", "alternatehistory", "althistory", "whatif",
+            "geopolitics", "geography", "mapping", "simulation",
+            "documentary", "education", "timeline", "future",
+            "shorts", "viral"
+        ]
+        
+        # Keywords to look for in title/location (lowercase for matching)
+        keyword_tags = {
+            # Countries
+            "usa": ["usa", "america", "american", "united states"],
+            "russia": ["russia", "russian", "soviet", "ussr", "moscow"],
+            "china": ["china", "chinese", "beijing"],
+            "japan": ["japan", "japanese", "tokyo"],
+            "germany": ["germany", "german", "berlin", "nazi"],
+            "uk": ["uk", "britain", "british", "england", "london"],
+            "france": ["france", "french", "paris"],
+            "india": ["india", "indian"],
+            "korea": ["korea", "korean", "pyongyang", "seoul"],
+            "mexico": ["mexico", "mexican"],
+            "brazil": ["brazil", "brazilian"],
+            "italy": ["italy", "italian", "rome"],
+            "canada": ["canada", "canadian"],
+            "australia": ["australia", "australian"],
+            # Topics
+            "war": ["war", "invasion", "battle", "military", "army"],
+            "ww2": ["ww2", "world war", "wwii", "nazi", "hitler"],
+            "coldwar": ["cold war", "soviet", "nuclear"],
+            "empire": ["empire", "imperial", "kingdom", "dynasty"],
+        }
+        
+        # Build search text from scenario
+        search_text = f"{clean_title} {getattr(scenario, 'location_name', '')} {getattr(scenario, 'premise', '')}".lower()
+        
+        # Find matching tags
+        dynamic_tags = []
+        for tag, keywords in keyword_tags.items():
+            if any(kw in search_text for kw in keywords):
+                dynamic_tags.append(tag)
+        
+        # Combine base + dynamic (limit to 15 tags for YouTube)
+        all_tags = base_tags + dynamic_tags
+        all_tags = list(dict.fromkeys(all_tags))[:15]  # Remove duplicates, limit
         
         # Prepare payload
         payload = {
@@ -271,7 +315,7 @@ class SocialPublisher:
             "title": f"{clean_title} 🤯",
             "description": final_description,
             "caption": final_description, # Use same for caption
-            "tags": ["history", "geopolitics", "education", "alternate history", "what if", "simulation"],
+            "tags": all_tags,
             "ai_generated": True,
             "privacy_status": self.config.get("privacy_status", "private"),
             "category_id": self.config.get("category_id", "27"),

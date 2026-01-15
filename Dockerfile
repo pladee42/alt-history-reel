@@ -32,5 +32,5 @@ RUN mkdir -p /app/output
 # FAL_KEY - Fal.ai API key
 # GOOGLE_APPLICATION_CREDENTIALS - Path to service account JSON (mounted as secret)
 
-# Default command: Run full pipeline with realistic style
-CMD ["python", "main.py", "--config", "configs/realistic.yaml"]
+# Default command: Run full pipeline for Timeline B channel
+CMD ["python", "main.py", "--config", "configs/timeline_b.yaml"]

@@ -36,8 +36,9 @@ publishing:
   channel_id: "timeline_b"
   platforms: 
     - "youtube"
-    - "tiktok"
+    # - "tiktok" # Temporarily disabled
     - "instagram"
+    - "facebook"
   
   # Platform-specific settings
   share_to_facebook: true

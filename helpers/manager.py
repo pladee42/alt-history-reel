@@ -57,6 +57,9 @@ class Settings:
     # Generation settings
     image_retries: int = 3
     
+    # Social publishing config (optional)
+    publishing: Dict = field(default_factory=dict)
+    
     # Runtime paths (set after initialization)
     config_path: str = ""
     output_dir: str = ""
@@ -169,6 +172,7 @@ def load_config(config_path: str) -> Settings:
         gemini_model=gemini_model,
         audio_mood=config_data.get('audio_mood', 'cinematic, atmospheric'),
         image_retries=config_data.get('image_retries', 3),
+        publishing=config_data.get('publishing', {}),
         config_path=config_path
     )
     

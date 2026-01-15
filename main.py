@@ -311,11 +311,18 @@ def run_phase_4(settings, dry_run: bool = False):
         scenario.video_url = video_url
         settings._current_final_video = final_video_path
         
+        # Publish to social platforms if enabled
+        if video_url and settings.publishing.get("enabled", False):
+            from utils.distributor import SocialPublisher
+            publisher = SocialPublisher(settings.publishing)
+            publisher.publish_video(video_url, scenario, dry_run=False)
+        
         print(f"\n✅ Phase 4 complete! Final video: {final_video_path}")
         if video_url:
             print(f"   ☁️  Video URL: {video_url}")
             
         return True
+
         
     except Exception as e:
         print(f"   ❌ Assembly/Distribution failed: {e}")

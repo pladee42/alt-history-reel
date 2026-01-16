@@ -73,7 +73,7 @@ class Cinematographer:
         self.use_kie = kie_config.get("enabled", False) and KIE_AVAILABLE
         
         if self.use_kie:
-            # Initialize Kie.ai client for Seedance
+            # Initialize Kie.ai client for Seedance or Veo3
             kie_key = os.getenv("KIE_AI_KEY")
             if not kie_key:
                 print("   ⚠️ KIE_AI_KEY not found, falling back to Fal.ai")
@@ -81,11 +81,25 @@ class Cinematographer:
             else:
                 self.kie_client = KieClient()
                 kie_video_config = self.config.get("kie_video", {})
-                self.kie_model = kie_video_config.get("model", "bytedance/seedance-1.5-pro")
-                self.kie_duration = kie_video_config.get("duration", 5)
-                self.kie_resolution = kie_video_config.get("resolution", "720p")
-                self.kie_aspect_ratio = kie_video_config.get("aspect_ratio", "9:16")
-                self.generate_audio = kie_video_config.get("generate_audio", True)
+                
+                # Check provider selection
+                self.kie_provider = kie_video_config.get("provider", "seedance")
+                
+                if self.kie_provider == "veo3":
+                    # Veo 3.1 config
+                    veo3_config = kie_video_config.get("veo3", {})
+                    self.veo3_model = veo3_config.get("model", "veo3_fast")
+                    self.veo3_aspect_ratio = veo3_config.get("aspect_ratio", "9:16")
+                    self.veo3_enable_translation = veo3_config.get("enable_translation", True)
+                    self.generate_audio = True  # Veo3.1 has embedded audio
+                else:
+                    # Seedance 1.5 Pro config (default)
+                    seedance_config = kie_video_config.get("seedance", {})
+                    self.kie_model = seedance_config.get("model", "bytedance/seedance-1.5-pro")
+                    self.kie_duration = seedance_config.get("duration", 5)
+                    self.kie_resolution = seedance_config.get("resolution", "720p")
+                    self.kie_aspect_ratio = seedance_config.get("aspect_ratio", "9:16")
+                    self.generate_audio = seedance_config.get("generate_audio", True)
         
         # Fal.ai config (fallback or primary)
         if not self.use_kie:
@@ -100,8 +114,12 @@ class Cinematographer:
         
         # Determine provider for display
         if self.use_kie:
-            provider = f"Kie.ai ({self.kie_model})"
-            audio_note = " + audio" if self.generate_audio else ""
+            if self.kie_provider == "veo3":
+                provider = f"Kie.ai Veo3 ({self.veo3_model})"
+                audio_note = ""
+            else:
+                provider = f"Kie.ai Seedance ({self.kie_model})"
+                audio_note = " + audio" if self.generate_audio else ""
         else:
             provider = f"Fal.ai ({self.video_model})"
             audio_note = ""
@@ -146,14 +164,17 @@ class Cinematographer:
         if hasattr(stage, 'image_prompt') and stage.image_prompt and stage.image_prompt not in motion_prompt:
             motion_prompt = f"IMPORTANT: Animates the video based on the image {stage.image_prompt}. {motion_prompt}"
 
-        
+                
         # Route to appropriate provider
         if self.use_kie:
-            # Extract audio prompt if generating audio
-            audio_prompt = ""
-            if self.generate_audio and hasattr(stage, 'audio_prompt'):
-                audio_prompt = stage.audio_prompt
-            return self._animate_with_kie(keyframe, motion_prompt, audio_prompt)
+            if self.kie_provider == "veo3":
+                return self._animate_with_veo3(keyframe, motion_prompt)
+            else:
+                # Seedance - extract audio prompt if generating audio
+                audio_prompt = ""
+                if self.generate_audio and hasattr(stage, 'audio_prompt'):
+                    audio_prompt = stage.audio_prompt
+                return self._animate_with_kie(keyframe, motion_prompt, audio_prompt)
         else:
             return self._animate_with_fal(keyframe, motion_prompt)
     
@@ -221,6 +242,67 @@ class Cinematographer:
                 path=str(video_path),
                 duration=float(self.kie_duration),
                 has_audio=self.generate_audio
+            )
+            
+        except Exception as e:
+            print(f"      ❌ Error: {e}")
+            raise
+    
+    def _animate_with_veo3(self, keyframe: Keyframe, motion_prompt: str) -> VideoClip:
+        """
+        Animate keyframe using Kie.ai Veo 3.1.
+        
+        Args:
+            keyframe: The keyframe to animate
+            motion_prompt: Motion/action description
+            
+        Returns:
+            VideoClip with path (no audio - Veo3 doesn't support native audio)
+        """
+        print(f"   🎥 Animating keyframe {keyframe.stage} via Kie.ai Veo3...")
+        
+        if not keyframe.url:
+            raise ValueError(f"Keyframe {keyframe.stage} has no URL. Kie.ai requires image URLs for video generation.")
+            
+        try:
+            result = self.kie_client.generate_video_veo3(
+                prompt=motion_prompt,
+                image_url=keyframe.url,
+                model=self.veo3_model,
+                aspect_ratio=self.veo3_aspect_ratio,
+                enable_translation=self.veo3_enable_translation
+            )
+            
+            # Download and save the video
+            video_path = Path(keyframe.path).parent / f"video_{keyframe.stage}.mp4"
+            
+            response = requests.get(result.video_url)
+            with open(video_path, 'wb') as f:
+                f.write(response.content)
+            
+            # Log cost
+            try:
+                from utils.cost_tracker import cost_tracker
+                scenario_id = video_path.parent.name
+                cost_tracker.log_kie_call(
+                    model=f"veo3-{self.veo3_model}",
+                    scenario_id=scenario_id,
+                    operation="image_to_video",
+                    metadata={
+                        "duration_seconds": 8,  # Veo3 default
+                        "has_audio": False
+                    }
+                )
+            except (ImportError, AttributeError):
+                pass
+            
+            print(f"      ✅ Saved: {video_path.name}")
+            
+            return VideoClip(
+                stage=keyframe.stage,
+                path=str(video_path),
+                duration=8.0,  # Veo3 generates ~8s videos
+                has_audio=True  # Veo3.1 embeds audio
             )
             
         except Exception as e:

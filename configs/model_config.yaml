@@ -78,13 +78,29 @@ kie:
 # ============================================
 # KIE.AI (Video Generation) - Phase 3
 # ============================================
-# Seedance 1.5 Pro: ByteDance's image-to-video with native audio
+# Supports two providers: Seedance 1.5 Pro and Veo 3.1
 kie_video:
-  model: "bytedance/seedance-1.5-pro"
-  duration: 4  # seconds (4-12 supported)
-  resolution: "720p"  # 480p, 720p, 1080p
-  aspect_ratio: "9:16"
-  generate_audio: true  # Seedance can generate synchronized audio
+  # Provider selection: "seedance" or "veo3"
+  provider: "veo3"
+  
+  # Seedance 1.5 Pro settings (when provider="seedance")
+  # - Has native audio generation
+  # - Configurable duration (4-12s)
+  seedance:
+    model: "bytedance/seedance-1.5-pro"
+    duration: 4  # seconds (4-12 supported)
+    resolution: "720p"  # 480p, 720p, 1080p
+    aspect_ratio: "9:16"
+    generate_audio: true
+  
+  # Veo 3.1 settings (when provider="veo3")
+  # - Better reference image adherence
+  # - Has embedded audio (like Seedance)
+  # - Fixed ~8s duration
+  veo3:
+    model: "veo3_fast"  # veo3 (quality, $1.25) or veo3_fast ($0.30)
+    aspect_ratio: "9:16"  # 16:9, 9:16, or Auto
+    enable_translation: true  # Auto-translate prompts to English
 
 # ============================================
 # Audio Configuration

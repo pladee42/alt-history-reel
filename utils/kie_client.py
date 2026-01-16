@@ -376,6 +376,133 @@ class KieClient:
             task_id=task_id,
             has_audio=generate_audio
         )
+    
+    # =========================================================================
+    # Veo3 Video Methods (Different API endpoint)
+    # =========================================================================
+    
+    def generate_video_veo3(
+        self,
+        prompt: str,
+        image_url: str,
+        model: str = "veo3_fast",
+        aspect_ratio: str = "9:16",
+        enable_translation: bool = True
+    ) -> KieVideoResult:
+        """
+        Generate video from image using Google Veo 3.1.
+        
+        Uses different endpoint: POST /api/v1/veo/generate
+        
+        Args:
+            prompt: Motion/action description
+            image_url: URL to the input image
+            model: "veo3" (quality) or "veo3_fast" (faster)
+            aspect_ratio: "16:9", "9:16", or "Auto"
+            enable_translation: Auto-translate non-English prompts
+            
+        Returns:
+            KieVideoResult with video URL
+        """
+        print(f"   🎥 Kie.ai: Generating video (Veo 3.1 {model})...")
+        
+        payload = {
+            "prompt": prompt,
+            "imageUrls": [image_url],  # Veo3 uses array of URLs
+            "model": model,
+            "aspect_ratio": aspect_ratio,
+            "enableTranslation": enable_translation,
+            "generationType": "REFERENCE_2_VIDEO"  # Reference-based for better image adherence
+        }
+        
+        response = requests.post(
+            f"{self.BASE_URL}/veo/generate",
+            headers=self.headers,
+            json=payload,
+            timeout=30
+        )
+        response.raise_for_status()
+        
+        result = response.json()
+        
+        # Extract task ID from response
+        data = result.get("data", {})
+        task_id = data.get("taskId")
+        
+        if not task_id:
+            raise ValueError(f"No taskId in Veo3 response: {result}")
+        
+        print(f"      📋 Task ID: {task_id}")
+        
+        # Wait for completion using Veo3-specific polling
+        completion = self._wait_for_veo3_completion(task_id)
+        video_url = self._extract_veo3_video_url(completion)
+        
+        print(f"      ✅ Video generated")
+        
+        return KieVideoResult(
+            video_url=video_url,
+            task_id=task_id,
+            has_audio=True  # Veo3.1 embeds audio
+        )
+    
+    def _wait_for_veo3_completion(
+        self, 
+        task_id: str, 
+        timeout: int = 600, 
+        poll_interval: int = 5
+    ) -> Dict[str, Any]:
+        """
+        Poll Veo3 task status using /api/v1/veo/record-info.
+        
+        Status codes (successFlag):
+        - 0: Generating
+        - 1: Success
+        - 2: Failed
+        - 3: Generation Failed
+        """
+        start_time = time.time()
+        
+        while time.time() - start_time < timeout:
+            response = requests.get(
+                f"{self.BASE_URL}/veo/record-info",
+                headers=self.headers,
+                params={"taskId": task_id},
+                timeout=30
+            )
+            response.raise_for_status()
+            result = response.json()
+            
+            data = result.get("data", {})
+            success_flag = data.get("successFlag")
+            
+            if success_flag == 1:
+                return data
+            
+            if success_flag in [2, 3]:
+                error_msg = data.get("errorMessage") or data.get("errorCode") or "Unknown error"
+                raise RuntimeError(f"Veo3 task {task_id} failed: {error_msg}")
+            
+            # Still generating (successFlag == 0)
+            time.sleep(poll_interval)
+        
+        raise TimeoutError(f"Veo3 task {task_id} timed out after {timeout}s")
+    
+    def _extract_veo3_video_url(self, data: Dict[str, Any]) -> str:
+        """Extract video URL from Veo3 completion response."""
+        response = data.get("response", {})
+        
+        # Try resultUrls first
+        result_urls = response.get("resultUrls") or []
+        if result_urls:
+            return result_urls[0]
+        
+        # Try originUrls as fallback
+        origin_urls = response.get("originUrls") or []
+        if origin_urls:
+            return origin_urls[0]
+        
+        raise ValueError(f"No video URL in Veo3 response: {data}")
 
 
 # Global singleton - only created if KIE_AI_KEY is set

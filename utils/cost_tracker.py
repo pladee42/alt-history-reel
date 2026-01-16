@@ -49,6 +49,9 @@ PRICING = {
         "480p_5s": 0.04,           # 8 credits, no audio
         "480p_5s_audio": 0.07,     # 14 credits, with audio
     },
+    # Kie.ai Veo 3.1 pricing (per video, ~8s)
+    "kie-veo3-fast": 0.30,                    # veo3_fast: 60 credits = $0.30
+    "kie-veo3-quality": 1.25,                 # veo3: 250 credits = $1.25
     
     # Gemini pricing (per 1M tokens - we'll estimate tokens)
     "gemini-2.0-flash": {
@@ -197,6 +200,13 @@ class CostTracker:
             
             seedance_pricing = PRICING.get("kie-seedance-1.5-pro", {})
             cost = seedance_pricing.get(pricing_key, 0.14)  # Default to 720p_5s_audio
+        
+        elif "veo3" in model.lower():
+            # Veo 3.1 video generation
+            if "fast" in model.lower() or "veo3_fast" in model.lower():
+                cost = PRICING.get("kie-veo3-fast", 0.30)
+            else:
+                cost = PRICING.get("kie-veo3-quality", 1.25)
         else:
             # Unknown Kie.ai model
             cost = 0.10

@@ -473,7 +473,13 @@ class KieClient:
             response.raise_for_status()
             result = response.json()
             
-            data = result.get("data", {})
+            # Handle case where data is explicitly null
+            data = result.get("data")
+            if data is None:
+                # API returned null data, may still be processing
+                time.sleep(poll_interval)
+                continue
+            
             success_flag = data.get("successFlag")
             
             if success_flag == 1:
@@ -483,7 +489,7 @@ class KieClient:
                 error_msg = data.get("errorMessage") or data.get("errorCode") or "Unknown error"
                 raise RuntimeError(f"Veo3 task {task_id} failed: {error_msg}")
             
-            # Still generating (successFlag == 0)
+            # Still generating (successFlag == 0 or None)
             time.sleep(poll_interval)
         
         raise TimeoutError(f"Veo3 task {task_id} timed out after {timeout}s")

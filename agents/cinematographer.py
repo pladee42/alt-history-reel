@@ -159,23 +159,30 @@ class Cinematographer:
         # 1. Define Motion/Action
         if not motion_prompt:
             motion_prompt = f"slow gentle motion, atmospheric, {stage.mood}"
-            
-        # 2. Add Prompt Prefix (User Request: "IMPORTANT: Animates the video based on the image...")
-        if hasattr(stage, 'image_prompt') and stage.image_prompt and stage.image_prompt not in motion_prompt:
-            motion_prompt = f"IMPORTANT: Animates the video based on the image {stage.image_prompt}. {motion_prompt}"
-
                 
         # Route to appropriate provider
         if self.use_kie:
             if self.kie_provider == "veo3":
+                # NOTE: Skip image_prompt prefix for Veo3 to avoid content policy violations
+                # The reference image is already passed via imageUrls, so generic motion works fine
+                # Original code (commented out):
+                # if hasattr(stage, 'image_prompt') and stage.image_prompt and stage.image_prompt not in motion_prompt:
+                #     motion_prompt = f"IMPORTANT: Animates the video based on the image {stage.image_prompt}. {motion_prompt}"
+                motion_prompt = "Animate the image with realistic sound"
                 return self._animate_with_veo3(keyframe, motion_prompt)
             else:
+                # Seedance - add image_prompt prefix for better adherence
+                if hasattr(stage, 'image_prompt') and stage.image_prompt and stage.image_prompt not in motion_prompt:
+                    motion_prompt = f"IMPORTANT: Animates the video based on the image {stage.image_prompt}. {motion_prompt}"
                 # Seedance - extract audio prompt if generating audio
                 audio_prompt = ""
                 if self.generate_audio and hasattr(stage, 'audio_prompt'):
                     audio_prompt = stage.audio_prompt
                 return self._animate_with_kie(keyframe, motion_prompt, audio_prompt)
         else:
+            # Fal.ai - add image_prompt prefix
+            if hasattr(stage, 'image_prompt') and stage.image_prompt and stage.image_prompt not in motion_prompt:
+                motion_prompt = f"IMPORTANT: Animates the video based on the image {stage.image_prompt}. {motion_prompt}"
             return self._animate_with_fal(keyframe, motion_prompt)
     
     def _animate_with_kie(self, keyframe: Keyframe, motion_prompt: str, audio_prompt: str = "") -> VideoClip:

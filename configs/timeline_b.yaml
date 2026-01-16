@@ -41,7 +41,6 @@ publishing:
     - "facebook"
   
   # Platform-specific settings
-  share_to_facebook: true
   privacy_status: "public"
   category_id: "27"  # Education
   

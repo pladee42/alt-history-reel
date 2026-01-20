@@ -38,7 +38,7 @@ publishing:
     - "youtube"
     # - "tiktok" # Temporarily disabled
     - "instagram"
-    - "facebook"
+    # - "facebook"
   
   # Platform-specific settings
   privacy_status: "public"

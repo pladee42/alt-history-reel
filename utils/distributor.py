@@ -232,7 +232,10 @@ class SocialPublisher:
             print("   ⚠️  SOCIAL_PUBLISHER_API_URL not set. Publishing disabled.")
         
         # Get template from config, or use default
-        self.description_template = config.get("description_template", "{title} 🤯")
+        self.description_templates = config.get("description_template", ["{title} 🤯"])
+        # Ensure it's a list
+        if isinstance(self.description_templates, str):
+            self.description_templates = [self.description_templates]
 
     def publish_video(self, video_url: str, scenario: object, dry_run: bool = False) -> bool:
         """
@@ -254,13 +257,17 @@ class SocialPublisher:
             return False
 
         import requests
+        import random
         
         # 1. Prepare Metadata
         # Remove bold markdown from title if present
         clean_title = scenario.title.replace("**", "").replace("*", "").strip()
         
-        # Construct final title and description from config template
-        final_description = self.description_template.format(title=clean_title)
+        # Select a random template
+        selected_template = random.choice(self.description_templates)
+        
+        # Construct final title and description from selected template
+        final_description = selected_template.format(title=clean_title)
 
         # Extract dynamic tags from scenario content (simple keyword matching)
         base_tags = [

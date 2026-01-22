@@ -46,16 +46,44 @@ publishing:
   
   # Description/Caption template
   # Use {title} as placeholder - will be replaced with cleaned scenario title
-  description_template: |
-    {title} 🤯
+  description_template: 
+    - |
+      {title} 🤫
 
-    History books DELETED this timeline. 🤫
-    Watch how the borders shift forever... 🗺️
+      The timeline they didn't want you to see.
+      What if history took a different turn? 🌍
 
-    Nightmare or Utopia? You decide. 👇
+      #AltHistory #Mystery #Simulation #WhatIf #[Country]
+    - |
+      {title} 🤯
 
-    .
-    .
+      Imagine a world where this actually happened.
+      Detailed simulation of a timeline shift. 🗺️
+
+      Nightmare or Utopia? You decide. 👇
+
+      #Geopolitics #History #Timeline #Scenario
+    - |
+      {title} ⚠️
+
+      Geography class never taught you this...
+      Watch the borders shift forever. 📉
+
+      #Educational #HistoryRemix #VisualStorytelling
+    - |
+      {title} 👁️
+
+      A glitch in the simulation?
+      This looks too real...
+
+      #UncannyValley #AlternateReality #CreativeWriting
+    - |
+      {title} 🎬
+
+      New administration. New rules.
+      A "What If" scenario exploring history's forks.
+
+      #Documentary #ShortFilm #SpeculativeFiction
     -———
     ⚠️ ARCHIVE NOTES:
     This video is a fictional "What If" scenario created with AI.

@@ -35,7 +35,7 @@ publishing:
   enabled: true
   channel_id: "timeline_b"
   platforms: 
-    - "youtube"
+    # - "youtube"
     # - "tiktok" # Temporarily disabled
     - "instagram"
     # - "facebook"

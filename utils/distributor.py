@@ -233,9 +233,10 @@ class SocialPublisher:
         
         # Get template from config, or use default
         self.description_templates = config.get("description_template", ["{title} 🤯"])
-        # Ensure it's a list
         if isinstance(self.description_templates, str):
             self.description_templates = [self.description_templates]
+            
+        self.description_footer = config.get("description_footer", "")
 
     def publish_video(self, video_url: str, scenario: object, dry_run: bool = False) -> bool:
         """
@@ -268,6 +269,10 @@ class SocialPublisher:
         
         # Construct final title and description from selected template
         final_description = selected_template.format(title=clean_title)
+        
+        # Append footer if exists
+        if self.description_footer:
+            final_description += "\n" + self.description_footer
 
         # Extract dynamic tags from scenario content (simple keyword matching)
         base_tags = [
